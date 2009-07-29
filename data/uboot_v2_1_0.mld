@@ -1,0 +1,56 @@
+#
+# U-BOOT Configuration File
+#
+# (C) Copyright 2007 Michal Simek
+#
+# Michal SIMEK <monstr@monstr.eu>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+# MA 02111-1307 USA
+
+# ChangeLOG:
+# 4.00.c : Standalone U-BOOT version for Microblaze CPU
+# 4.00.b : Support EDK 9.2, Separate Stdin and Stdout
+# 2.00.a : Added support for PowerPC FDT generation
+# 1.01.b : support for EthernetLITE, Uart16550, Uart16440
+
+OPTION psf_version = 2.1;
+
+BEGIN OS uboot
+
+OPTION DRC = uboot_drc;
+OPTION SUPPORTED_PERIPHERALS = (microblaze ppc405 ppc405_virtex4 ppc440_virtex5);
+OPTION DESC = "Generate config file for U-BOOT bootloader";
+#OPTION copyfiles = all;
+
+PARAMETER name = flash_memory_size, desc="Manual override of flash memory size", type = integer, default = 0;
+PARAMETER name = flash_memory_start, desc="Manual override of flash memory startaddress", type=integer, default=0;
+PARAMETER name = flash_memory_bank, desc="Bank Nr. within memory controller of flash memory", type = integer, default = 0;
+PARAMETER name = flash_memory, desc ="Flash Memory Controller", type = peripheral_instance, range=(opb_emc, plb_emc, xps_mch_emc), default = none;
+PARAMETER name = main_memory_size, desc="Memory size", type = integer, default = 0;
+PARAMETER name = main_memory_bank, desc="Bank Nr. within memory controller of main memory", type = integer, default = 0;
+PARAMETER name = main_memory, desc ="Main Memory for U-Boot", type = peripheral_instance, range=(mch_opb_ddr, opb_ddr, opb_emc, plb_ddr, plb_emc, opb_sdram, plb_sdram, mpmc, xps_mch_emc), default = none;
+PARAMETER name = uboot_position, desc="Uboot position in memory", type = integer, default = 0;
+#PARAMETER name = intc, desc="Interrupt controller", type = peripheral_instance, range=(opb_intc,plb_intc, xps_intc), default = none;
+PARAMETER name = gpio, desc="Led interface", type = peripheral_instance, range=(opb_gpio,plb_gpio,xps_gpio), default = none;
+PARAMETER name = iic, desc="iic interface", type = peripheral_instance, range=(opb_iic,xps_iic), default = none;
+PARAMETER name = sysace, desc="Sysace interface for CF", type = peripheral_instance, range=(opb_sysace, xps_sysace), default = none;
+PARAMETER name = ethernet, desc="Ethernet controller", type = peripheral_instance, range=(opb_ethernet, xps_ethernet, opb_ethernetlite, xps_ethernetlite, xps_ll_temac), default = none;
+PARAMETER name = timer, desc="Timer for measuring time", type = peripheral_instance, range=(opb_timer, plb_timer, xps_timer), default = none;
+PARAMETER name = stdout, desc = "Console peripheral for bootloader", type = peripheral_instance,range=(opb_uartlite, opb_uart16550, opb_uart16440, xps_uartlite), default = none;
+PARAMETER name = stdin, desc = "Console peripheral for bootloader", type = peripheral_instance,range=(opb_uartlite, opb_uart16550, opb_uart16440, xps_uartlite), default = none;
+#PARAMETER name = bootargs, desc = "Booting arguments", type = string, default = "root=/dev/xsysace/disc0/part2";
+#PARAMETER name = name, desc = "Name of board", type = string, default = "";
+END OS
