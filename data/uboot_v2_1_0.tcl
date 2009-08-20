@@ -66,23 +66,9 @@ proc generate_uboot {os_handle} {
 	# ******************************************************************************
 	# print system clock
 	set proc_handle [xget_libgen_proc_handle]
-	set sys_clock [xget_sw_parameter_value $proc_handle "CORE_CLOCK_FREQ_HZ"]
-	# print system clock
-	set sys_clock [xget_sw_parameter_value $proc_handle "CORE_CLOCK_FREQ_HZ"]
-	if { [llength $sys_clock] != 0 } {
-		lappend cpu [list clk "SYSTEM_CLK" $sys_clock]
-	} else {
-		set hwproc_handle [xget_handle $proc_handle "IPINST"]
-		# Get the clock frequency from the processor
-		set clkhandle [xget_hw_port_handle $hwproc_handle "CLK"]
-		if {[string compare -nocase $clkhandle ""] != 0} {
-			set sys_clock [xget_hw_subproperty_value $clkhandle "CLK_FREQ_HZ"]
-		} else {
-			error "CLK is not defined"
-		}
-	}
+	set hwproc_handle [xget_handle $proc_handle "IPINST"]
 	puts $config_file "/* System Clock Frequency */"
-	puts $config_file "#define XILINX_CLOCK_FREQ\t$sys_clock\n"
+	puts $config_file "#define XILINX_CLOCK_FREQ\t[clock_val $hwproc_handle]\n"
 
 	# Microblaze
 	set hwproc_handle [xget_handle $proc_handle "IPINST"]
@@ -286,15 +272,8 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 			"xps_uart16550" {
 				puts $config_file "#define XILINX_UART16550"
 				puts $config_file "#define XILINX_UART16550_BASEADDR\t[uboot_addr_hex $uart_handle "C_BASEADDR"]"
-#				FIXME bad sysclock frequency
-#				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t$system_bus"
-# it is driver dependent code
-				set drv_handle [xget_handle $proc_handle "DRIVER" "uartns550"]
-				if { [llength $drv_handle] == 0 } {
-					error "Please specify your standalone driver for Uart16550"
-				}
-				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[xget_value $drv_handle "PARAMETER" "CLOCK_HZ"]"
-# dependent end
+# find correct uart16550 frequency
+				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
 			}
 			"opb_uartlite" -
 			"xps_uartlite" -
@@ -691,6 +670,24 @@ proc get_intr {per_handle intc intc_value port_name} {
 	} else {
 		return -1
 	}
+}
+
+proc clock_val {hw_handle} {
+	set ipname [xget_hw_name $hw_handle]
+	set ports [xget_hw_port_handle $hw_handle "*"]
+	foreach port $ports {
+		set sigis [xget_hw_subproperty_value $port "SIGIS"]
+		if {[string toupper $sigis] == "CLK"} {
+			set portname [xget_hw_name $port]
+			# EDK doesn't compute clocks for ports that aren't connected.
+			set connected_port [xget_hw_port_value $hw_handle $portname]
+			if {[llength $connected_port] != 0} {
+				set frequency [get_clock_frequency $hw_handle $portname]
+				return "$frequency"
+			}
+		}
+	}
+	puts "Not find correct clock frequency"
 }
 
 #
