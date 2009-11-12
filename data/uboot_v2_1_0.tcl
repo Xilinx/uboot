@@ -544,7 +544,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		if {[llength $eram_base] != 0 } {
 			set half [format "0x%08x" [expr $eram_high - 0x100000 ]]
 			puts $config_file2 "TEXT_BASE = $half"
-			puts "WARNING automatic U-BOOT position = $half"
+			puts "INFO automatic U-BOOT position = $half"
 		} else {
 			error "Main memory is not defined"
 		}
