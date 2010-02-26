@@ -379,19 +379,41 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 	} else {
 		set flash_mem_handle [xget_sw_ipinst_handle_from_processor $proc_handle $flash_mem]
 		set flash_mem_bank [xget_sw_parameter_value $os_handle "flash_memory_bank"]
-		set base_param_name [format "C_MEM%i_BASEADDR" $flash_mem_bank]
-		set high_param_name [format "C_MEM%i_HIGHADDR" $flash_mem_bank]
-		set flash_start [xget_sw_parameter_value $flash_mem_handle $base_param_name]
-		set flash_end [xget_sw_parameter_value $flash_mem_handle $high_param_name]
-		set flash_size [expr $flash_end - $flash_start + 1]
-		set flash_start [format "0x%08x" $flash_start]
-		set flash_size [format "0x%08x" $flash_size]
-		if {$eram_base < $flash_start} {
-			puts $config_file "/* Flash Memory is $flash_mem */"
-			puts $config_file "#define XILINX_FLASH_START\t$flash_start"
-			puts $config_file "#define XILINX_FLASH_SIZE\t$flash_size"
-		} else {
-			error "Flash base address must be on higher address than ram memory"
+		set flash_type [xget_hw_value $flash_mem_handle];
+		puts $config_file "/* Flash Memory is $flash_mem */"
+
+		# Handle different FLASHs differently
+		switch -exact $flash_type {
+			"xps_spi" {
+				# SPI FLASH
+				# Set the SPI FLASH's SPI controller's base address.
+				set spi_start [xget_sw_parameter_value $flash_mem_handle "C_BASEADDR"]
+				puts $config_file "#define XILINX_SPI_FLASH_BASEADDR\t$spi_start"
+				# Set the SPI FLASH clock frequency
+				set sys_clk [get_clock_frequency $flash_mem_handle "SPLB_CLK"]
+				set sck_ratio [xget_sw_parameter_value $flash_mem_handle "C_SCK_RATIO"]
+				set sck [expr { $sys_clk / $sck_ratio }]
+				puts $config_file "#define XILINX_SPI_FLASH_MAX_FREQ\t$sck"
+				# Set the SPI FLASH chip select
+				global flash_memory_bank
+				puts $config_file "#define XILINX_SPI_FLASH_CS\t$flash_memory_bank"
+			}
+			default {
+				# Parallel Flash
+				set base_param_name [format "C_MEM%i_BASEADDR" $flash_mem_bank]
+				set high_param_name [format "C_MEM%i_HIGHADDR" $flash_mem_bank]
+				set flash_start [xget_sw_parameter_value $flash_mem_handle $base_param_name]
+				set flash_end [xget_sw_parameter_value $flash_mem_handle $high_param_name]
+				set flash_size [expr $flash_end - $flash_start + 1]
+				set flash_start [format "0x%08x" $flash_start]
+				set flash_size [format "0x%08x" $flash_size]
+				if {$eram_base < $flash_start} {
+					puts $config_file "#define XILINX_FLASH_START\t$flash_start"
+					puts $config_file "#define XILINX_FLASH_SIZE\t$flash_size"
+				} else {
+					error "Flash base address must be on higher address than ram memory"
+				}
+			}
 		}
 	}
 	puts $config_file ""
