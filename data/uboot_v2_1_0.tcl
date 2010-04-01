@@ -107,6 +107,9 @@ proc generate_uboot {os_handle} {
 							puts $config_file "#define XILINX_USE_DCACHE\t$arg_value"
 						}
 					}
+					DCACHE_BYTE_SIZE {
+						puts $config_file "#define XILINX_DCACHE_BYTE_SIZE\t$arg_value"
+					}
 					#DCACHE_BASEADDR {
 					#	puts $config_file "#define XILINX_DCACHE_BASEADDR\t$arg_value"
 					#}
