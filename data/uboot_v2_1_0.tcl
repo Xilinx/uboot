@@ -158,25 +158,41 @@ proc generate_uboot {os_handle} {
 			}
 
 			# OPB bus resolve
-			set dopb [xget_handle $hwproc_handle "BUS_INTERFACE" "DOPB"]
-			set dopb [xget_value $dopb "VALUE"]
-			set iopb [xget_handle $hwproc_handle "BUS_INTERFACE" "IOPB"]
-			set iopb [xget_value $iopb "VALUE"]
-			if { $dopb == $iopb } {
-				set system_bus "$dopb"
-				puts "System bus for instruction and data $dopb"
-				#testing
-				#	set bus [xget_sw_parameter_value $os_handle "opb_v20"]
-				##	set bus_handle [xget_sw_ipinst_handle_from_processor $proc_handle $bus]
-				##	set hodn [xget_sw_parameter_value $bus_handle "C_EXT_RESET_HIGH"]
-				#	puts "fdf $bus fds"
-				#	set clk [xget_handle $dopb "PORT" "OPB_Clk"]
-				#	puts "$clk"
-				#	set clk [xget_value $clk "VALUE"]
-				#	error "$clk"
-				#end testing
+			set busif_handle [xget_hw_busif_handle $hwproc_handle "DPLB"]
+			if {[llength $busif_handle] != 0} {
+				# Microblaze v7 has PLB.
+				set dplb [xget_handle $hwproc_handle "BUS_INTERFACE" "DPLB"]
+				set dplb [xget_value $dplb "VALUE"]
+				set iplb [xget_handle $hwproc_handle "BUS_INTERFACE" "IPLB"]
+				set iplb [xget_value $iplb "VALUE"]
+				if { $dplb == $iplb } {
+					set system_bus "$dplb"
+					puts "System bus for instruction and data $dplb"
+				} else {
+					error "different microblaze architecture - dual busses $iplb $dplb"
+				}
 			} else {
-				error "different microblaze architecture - dual busses $iopb $dopb"
+				# Older microblazes have OPB.
+				set dopb [xget_handle $hwproc_handle "BUS_INTERFACE" "DOPB"]
+				set dopb [xget_value $dopb "VALUE"]
+				set iopb [xget_handle $hwproc_handle "BUS_INTERFACE" "IOPB"]
+				set iopb [xget_value $iopb "VALUE"]
+				if { $dopb == $iopb } {
+					set system_bus "$dopb"
+					puts "System bus for instruction and data $dopb"
+					#testing
+					#	set bus [xget_sw_parameter_value $os_handle "opb_v20"]
+					##	set bus_handle [xget_sw_ipinst_handle_from_processor $proc_handle $bus]
+					##	set hodn [xget_sw_parameter_value $bus_handle "C_EXT_RESET_HIGH"]
+					#	puts "fdf $bus fds"
+					#	set clk [xget_handle $dopb "PORT" "OPB_Clk"]
+					#	puts "$clk"
+					#	set clk [xget_value $clk "VALUE"]
+					#	error "$clk"
+					#end testing
+				} else {
+					error "different microblaze architecture - dual busses $iopb $dopb"
+				}
 			}
 			puts $config_file ""
 			uboot_intc $os_handle $proc_handle $config_file $config_file2 $system_bus
