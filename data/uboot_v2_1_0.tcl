@@ -45,6 +45,16 @@ proc generate {os_handle} {
 proc post_generate {lib_handle} {
 }
 
+# Return the clock frequency attribute of the port of the given ip core.
+proc get_clock_frequency {ip_handle portname} {
+	set clk ""
+	set clkhandle [xget_hw_port_handle $ip_handle $portname]
+	if {[string compare -nocase $clkhandle ""] != 0} {
+		set clk [xget_hw_subproperty_value $clkhandle "CLK_FREQ_HZ"]
+	}
+	return $clk
+}
+
 proc generate_uboot {os_handle} {
 	puts "\#--------------------------------------"
 	puts "\# uboot BSP generate..."
