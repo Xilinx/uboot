@@ -2,6 +2,8 @@
 # EDK BSP board generation for U-boot supporting Microblaze and PPC
 #
 # (C) Copyright 2007-2008 Michal Simek
+# (C)		2009-2010 John Williams <john.williams@petalogix.com>
+# (C)		2009-2010 PetaLogix Qld Pty Ltd
 #
 # Michal SIMEK <monstr@monstr.eu>
 #
@@ -27,6 +29,8 @@
 set version "U-BOOT v4.00.c"
 set cpunumber 0
 set periphery_array ""
+
+set proctype ""
 
 proc uboot_drc {os_handle} {
 	puts "\#--------------------------------------"
@@ -56,6 +60,7 @@ proc get_clock_frequency {ip_handle portname} {
 }
 
 proc generate_uboot {os_handle} {
+	global proctype
 	puts "\#--------------------------------------"
 	puts "\# uboot BSP generate..."
 	puts "\#--------------------------------------"
@@ -167,56 +172,22 @@ proc generate_uboot {os_handle} {
 				}
 			}
 
-			# OPB bus resolve
-			set busif_handle [xget_hw_busif_handle $hwproc_handle "DPLB"]
-			if {[llength $busif_handle] != 0} {
-				# Microblaze v7 has PLB.
-				set dplb [xget_handle $hwproc_handle "BUS_INTERFACE" "DPLB"]
-				set dplb [xget_value $dplb "VALUE"]
-				set iplb [xget_handle $hwproc_handle "BUS_INTERFACE" "IPLB"]
-				set iplb [xget_value $iplb "VALUE"]
-				if { $dplb == $iplb } {
-					set system_bus "$dplb"
-					puts "System bus for instruction and data $dplb"
-				} else {
-					error "different microblaze architecture - dual busses $iplb $dplb"
-				}
-			} else {
-				# Older microblazes have OPB.
-				set dopb [xget_handle $hwproc_handle "BUS_INTERFACE" "DOPB"]
-				set dopb [xget_value $dopb "VALUE"]
-				set iopb [xget_handle $hwproc_handle "BUS_INTERFACE" "IOPB"]
-				set iopb [xget_value $iopb "VALUE"]
-				if { $dopb == $iopb } {
-					set system_bus "$dopb"
-					puts "System bus for instruction and data $dopb"
-					#testing
-					#	set bus [xget_sw_parameter_value $os_handle "opb_v20"]
-					##	set bus_handle [xget_sw_ipinst_handle_from_processor $proc_handle $bus]
-					##	set hodn [xget_sw_parameter_value $bus_handle "C_EXT_RESET_HIGH"]
-					#	puts "fdf $bus fds"
-					#	set clk [xget_handle $dopb "PORT" "OPB_Clk"]
-					#	puts "$clk"
-					#	set clk [xget_value $clk "VALUE"]
-					#	error "$clk"
-					#end testing
-				} else {
-					error "different microblaze architecture - dual busses $iopb $dopb"
-				}
-			}
-			puts $config_file ""
-			uboot_intc $os_handle $proc_handle $config_file $config_file2 $system_bus
 		}
 		"ppc405" -
 		"ppc405_virtex4" -
 		"ppc440_virtex5" {
-			puts "unsupported processor type $proctype\n"
-#			error "ERROR $proctype not supported by U-BOOT yet"
+			# Write only name of instance
+			puts $config_file "/* PPC is [xget_hw_parameter_value $hwproc_handle "INSTANCE"] */"
 		}
 		default {
 			error "This type of CPU is not supported by U-BOOT yet"
 		}
 	}
+
+	puts $config_file ""
+	# Note final param (system_bus) is not used, just blank it off for now
+	uboot_intc $os_handle $proc_handle $config_file $config_file2 ""
+
 	close $config_file
 	close $config_file2
 }
@@ -236,9 +207,25 @@ proc uboot_value {handle name} {
 
 
 proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
+	global proctype
 # ******************************************************************************
 # Interrupt controler
-	set intc_handle [get_handle_to_intc $proc_handle "Interrupt"]
+	switch $proctype {
+		"microblaze" {
+			set intc_handle [get_handle_to_intc $proc_handle "Interrupt"]
+		}
+
+		"ppc405" -
+                "ppc405_virtex4" {
+			set intc_handle [get_handle_to_intc $proc_handle "EICC405EXTINPUTIRQ"]
+		}
+
+		"ppc440_virtex5" {
+			set intc_handle [get_handle_to_intc $proc_handle "EICC440EXTIRQ"]
+		}
+	}
+
+
 	if {[string match "" $intc_handle] || [string match -nocase "none" $intc_handle]} {
 		puts $config_file "/* Interrupt controller not defined */"
 	} else {
@@ -523,40 +510,63 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 #				puts "$slave_ips"
 #target is mpmc
 				set llink_bus [xget_hw_connected_busifs_handle $mhs_handle $bus_type "TARGET"]
-				debug 8 "handle of mpmc bus is $llink_bus"
+				debug 8 "handle of parent bus is $llink_bus"
 #name of bus interface
 				set llink_name [xget_hw_name $llink_bus]
-				debug 8 "Name of mpmc interface: $llink_name"
+				debug 8 "Name of parent interface: $llink_name"
 #get mpmc handle
 				set llink_handle [xget_hw_parent_handle $llink_bus]
 
-				set sdma [xget_sw_parameter_handle $llink_handle "C_SDMA_CTRL_BASEADDR"]
-				if {[llength $sdma] != 0 } {
-					set mpmc [xget_hw_name $llink_handle]
-					debug 8 "mpmc is $mpmc"
-#I need to separate number of interface
-					set sdma_channel [string index "$llink_name" [expr [string length $llink_name] - 1]]
-					set sdma_name [xget_value $sdma "NAME"]
-					set sdma_name [string map -nocase {C_ ""} $sdma_name]
-					set sdma_base [xget_value $sdma "VALUE"]
-					debug 8 "$sdma_name $sdma_base"
-#channel count
-					set sdma_base [expr $sdma_base + [expr $sdma_channel * 0x80]]
-					set sdma_base [format "0x%08x" $sdma_base] 
-					puts $config_file "#define XILINX_LLTEMAC_${sdma_name}\t${sdma_base}"
-				} else {
-					set fifo [xget_sw_parameter_handle $llink_handle "C_BASEADDR"]
-					if {[llength $fifo] != 0 } {
-						set ll_fifo [xget_hw_name $llink_handle]
-						debug 8 "ll_fifo is $ll_fifo, $fifo"
-						set fifo_name [xget_value $fifo "NAME"]
-						set fifo_name [string map -nocase {C_ ""} $fifo_name]
-						set fifo_base [xget_value $fifo "VALUE"]
-						debug 8 "$fifo_name $fifo_base"
-						puts $config_file "#define XILINX_LLTEMAC_FIFO_${fifo_name}\t${fifo_base}"
+				set connected_ip_name [xget_hw_name $llink_handle]
+				set connected_ip_type [xget_hw_value $llink_handle]
+
+				debug 8 "connected ip_name: $connected_ip_name"
+				debug 8 "connected ip_type: $connected_ip_type"
+
+				if {$connected_ip_type == "mpmc" } {
+					set sdma [xget_sw_parameter_handle $llink_handle "C_SDMA_CTRL_BASEADDR"]
+					debug 8 "sdma: $sdma"
+					if {[llength $sdma] != 0 } {
+						set mpmc [xget_hw_name $llink_handle]
+						debug 8 "mpmc is $mpmc"
+	#I need to separate number of interface
+						set sdma_channel [string index "$llink_name" [expr [string length $llink_name] - 1]]
+						set sdma_name [xget_value $sdma "NAME"]
+						set sdma_name [string map -nocase {C_ ""} $sdma_name]
+						set sdma_base [xget_value $sdma "VALUE"]
+						debug 8 "$sdma_name $sdma_base"
+	#channel count
+						set sdma_base [expr $sdma_base + [expr $sdma_channel * 0x80]]
+						set sdma_base [format "0x%08x" $sdma_base] 
+						puts $config_file "#define XILINX_LLTEMAC_${sdma_name}\t${sdma_base}"
 					} else {
-						error "your ll_temac is no connected properly"
+						set fifo [xget_sw_parameter_handle $llink_handle "C_BASEADDR"]
+						if {[llength $fifo] != 0 } {
+							set ll_fifo [xget_hw_name $llink_handle]
+							debug 8 "ll_fifo is $ll_fifo, $fifo"
+							set fifo_name [xget_value $fifo "NAME"]
+							set fifo_name [string map -nocase {C_ ""} $fifo_name]
+							set fifo_base [xget_value $fifo "VALUE"]
+							debug 8 "$fifo_name $fifo_base"
+							puts $config_file "#define XILINX_LLTEMAC_FIFO_${fifo_name}\t${fifo_base}"
+						} else {
+							warning "your ll_temac is no connected properly"
+						}
 					}
+				} elseif {$connected_ip_type == "ppc440_virtex5"} {
+					puts "1"
+			                # Assumes only one PPC.
+			                if {[string match LLDMA? $llink_name]} {
+						puts "2"
+			                        set port_number [string range $llink_name 5 5]
+						puts "3"
+			                        set sdma_name "DMA$port_number"
+						puts "4"
+						puts "sdma_name:$sdma_name"
+						puts "5"
+			                } else {
+			                        error "found ll_temac connected to ppc440_virtex5, but can't find the port number!"
+			                }
 				}
 			}
 			"opb_ethernetlite" -
@@ -768,5 +778,5 @@ proc get_handle_to_intc {proc_handle port_name} {
 
 
 proc debug {level message} {
-#	puts "$message"
+	puts "$message"
 }
