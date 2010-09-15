@@ -32,9 +32,9 @@ set periphery_array ""
 
 set proctype ""
 
-proc uboot_drc {os_handle} {
+proc bsp_drc {os_handle} {
 	puts "\#--------------------------------------"
-	puts "\# uboot BSP DRC...!"
+	puts "\# uboot BSP DRC..."
 	puts "\#--------------------------------------"
 }
 
