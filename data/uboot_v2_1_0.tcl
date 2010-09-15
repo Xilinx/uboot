@@ -285,6 +285,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		set type [xget_value $uart_handle "VALUE"]
 		switch $type {
 			"opb_uart16550" -
+			"axi_uart16550" -
 			"xps_uart16550" {
 				puts $config_file "#define XILINX_UART16550"
 				puts $config_file "#define XILINX_UART16550_BASEADDR\t[uboot_addr_hex $uart_handle "C_BASEADDR"]"
@@ -293,6 +294,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 			}
 			"opb_uartlite" -
 			"xps_uartlite" -
+			"axi_uartlite" -
 			"opb_mdm" -
 			"xps_mdm" {
 				set args [xget_sw_parameter_handle $uart_handle "*"]
@@ -366,12 +368,19 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		set main_mem_bank [xget_sw_parameter_value $os_handle "main_memory_bank"]
 		set main_mem_handle [xget_sw_ipinst_handle_from_processor $proc_handle $main_mem]
 		if {[string compare -nocase $main_mem_handle ""] != 0} {
-			if {[xget_hw_value $main_mem_handle] == "mpmc"} {
-				set base_param_name "C_MPMC_BASEADDR"
-				set high_param_name "C_MPMC_HIGHADDR"
-			} else {
-				set base_param_name [format "C_MEM%i_BASEADDR" $main_mem_bank]
-				set high_param_name [format "C_MEM%i_HIGHADDR" $main_mem_bank]
+			switch [xget_hw_value $main_mem_handle] {
+				"mpmc" { 
+					set base_param_name "C_MPMC_BASEADDR"
+					set high_param_name "C_MPMC_HIGHADDR"
+				} 
+				"axi_s6_ddrx" {
+					set base_param_name [format "C_S%i_AXI_BASEADDR" $main_mem_bank]
+					set high_param_name [format "C_S%i_AXI_HIGHADDR" $main_mem_bank]
+				}
+				default {
+					set base_param_name [format "C_MEM%i_BASEADDR" $main_mem_bank]
+					set high_param_name [format "C_MEM%i_HIGHADDR" $main_mem_bank]
+				}
 			}
 			set eram_base [xget_sw_parameter_value $main_mem_handle $base_param_name]
 			set eram_end [xget_sw_parameter_value $main_mem_handle $high_param_name]
@@ -380,6 +389,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 			set eram_size [format "0x%08x" $eram_size]
 			set eram_high [expr $eram_base + $eram_size]
 			set eram_high [format "0x%08x" $eram_high]
+			puts "/* Main Memory is $main_mem */"
 			puts $config_file "/* Main Memory is $main_mem */"
 			puts $config_file "#define XILINX_RAM_START\t$eram_base"
 			puts $config_file "#define XILINX_RAM_SIZE\t\t$eram_size"
@@ -400,6 +410,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 
 		# Handle different FLASHs differently
 		switch -exact $flash_type {
+			"axi_spi" -
 			"xps_spi" {
 				# SPI FLASH
 				# Set the SPI FLASH's SPI controller's base address.
@@ -414,10 +425,16 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 				global flash_memory_bank
 				puts $config_file "#define XILINX_SPI_FLASH_CS\t$flash_memory_bank"
 			}
-			default {
+			"axi_emc" -
+			"xps_emc" {
 				# Parallel Flash
-				set base_param_name [format "C_MEM%i_BASEADDR" $flash_mem_bank]
-				set high_param_name [format "C_MEM%i_HIGHADDR" $flash_mem_bank]
+				if { $flash_type == "xps_emc" } {
+					set base_param_name [format "C_MEM%i_BASEADDR" $flash_mem_bank]
+					set high_param_name [format "C_MEM%i_HIGHADDR" $flash_mem_bank]
+				} else {
+					set base_param_name [format "C_S_AXI_MEM%i_BASEADDR" $flash_mem_bank]
+					set high_param_name [format "C_S_AXI_MEM%i_HIGHADDR" $flash_mem_bank]
+				}
 				set flash_start [xget_sw_parameter_value $flash_mem_handle $base_param_name]
 				set flash_end [xget_sw_parameter_value $flash_mem_handle $high_param_name]
 				set flash_size [expr $flash_end - $flash_start + 1]
@@ -430,6 +447,9 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 					error "Flash base address must be on higher address than ram memory"
 				}
 			}
+			default {
+				error "Unknown flash memory interface type $flash_type"
+				}
 		}
 	}
 	puts $config_file ""
@@ -570,6 +590,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 				}
 			}
 			"opb_ethernetlite" -
+			"axi_ethernetlite" -
 			"xps_ethernetlite" {
 				set args [xget_sw_parameter_handle $ethernet_handle "*"]
 				foreach arg $args {
@@ -588,6 +609,9 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 						default {}
 					}
 				}
+			}
+			"axi_ethernet" {
+				puts "WARNING: stubbed support for AXI ethernet"
 			}
 			default {
 				error "Unsupported ethernet periphery - $ethernet_name"
