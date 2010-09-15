@@ -426,9 +426,9 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 				puts $config_file "#define XILINX_SPI_FLASH_CS\t$flash_memory_bank"
 			}
 			"axi_emc" -
-			"xps_emc" {
+			"xps_mch_emc" {
 				# Parallel Flash
-				if { $flash_type == "xps_emc" } {
+				if { $flash_type == "xps_mch_emc" } {
 					set base_param_name [format "C_MEM%i_BASEADDR" $flash_mem_bank]
 					set high_param_name [format "C_MEM%i_HIGHADDR" $flash_mem_bank]
 				} else {
