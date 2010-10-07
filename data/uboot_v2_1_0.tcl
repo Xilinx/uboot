@@ -284,12 +284,16 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		puts $config_file "/* Uart pheriphery is $uart */"
 		set type [xget_value $uart_handle "VALUE"]
 		switch $type {
-			"opb_uart16550" -
-			"axi_uart16550" -
-			"xps_uart16550" {
+			"axi_uart16550" {
 				puts $config_file "#define XILINX_UART16550"
 				puts $config_file "#define XILINX_UART16550_BASEADDR\t[uboot_addr_hex $uart_handle "C_BASEADDR"]"
-# find correct uart16550 frequency
+				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
+			}
+			"opb_uart16550" -
+			"xps_uart16550" {
+				puts $config_file "#define XILINX_UART16550"
+				set addr [expr [uboot_addr_hex $uart_handle "C_BASEADDR"] + 3]
+				puts $config_file "#define XILINX_UART16550_BASEADDR\t[format "0x%08x" $addr]"
 				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
 			}
 			"opb_uartlite" -
