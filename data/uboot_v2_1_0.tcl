@@ -381,6 +381,10 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 					set base_param_name [format "C_S%i_AXI_BASEADDR" $main_mem_bank]
 					set high_param_name [format "C_S%i_AXI_HIGHADDR" $main_mem_bank]
 				}
+				"ppc440mc_ddr2" {
+					set base_param_name "C_MEM_BASEADDR"
+					set high_param_name "C_MEM_HIGHADDR"
+				}
 				default {
 					set base_param_name [format "C_MEM%i_BASEADDR" $main_mem_bank]
 					set high_param_name [format "C_MEM%i_HIGHADDR" $main_mem_bank]
