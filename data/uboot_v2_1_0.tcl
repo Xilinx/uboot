@@ -425,7 +425,11 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 				set spi_start [xget_sw_parameter_value $flash_mem_handle "C_BASEADDR"]
 				puts $config_file "#define XILINX_SPI_FLASH_BASEADDR\t$spi_start"
 				# Set the SPI FLASH clock frequency
-				set sys_clk [get_clock_frequency $flash_mem_handle "SPLB_CLK"]
+				if { $flash_type == "axi_spi" } {
+					set sys_clk [get_clock_frequency $flash_mem_handle "S_AXI_ACLK"]
+				} else {
+					set sys_clk [get_clock_frequency $flash_mem_handle "SPLB_Clk"]
+				}
 				set sck_ratio [xget_sw_parameter_value $flash_mem_handle "C_SCK_RATIO"]
 				set sck [expr { $sys_clk / $sck_ratio }]
 				puts $config_file "#define XILINX_SPI_FLASH_MAX_FREQ\t$sck"
