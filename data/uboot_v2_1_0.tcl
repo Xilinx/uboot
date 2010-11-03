@@ -641,6 +641,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		if {[llength $eram_base] != 0 } {
 			set half [format "0x%08x" [expr $eram_high - 0x100000 ]]
 			puts $config_file2 "TEXT_BASE = $half"
+			puts $config_file2 "CONFIG_SYS_TEXT_BASE = $half"
 			puts "INFO automatic U-BOOT position = $half"
 		} else {
 			error "Main memory is not defined"
@@ -649,6 +650,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		if {$eram_base < $text_base && $eram_high > $text_base} {
 			#			puts $config_file2 "# TEXT BASE "
 			puts $config_file2 "TEXT_BASE = $text_base"
+			puts $config_file2 "CONFIG_SYS_TEXT_BASE = $text_base"
 			puts $config_file2 ""
 			# print system clock
 			#	set sw [xget_sw_parameter_value $proc_handle "HW_INSTANCE"]
