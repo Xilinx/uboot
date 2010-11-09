@@ -536,37 +536,37 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 
 				set bus_handle [xget_handle $ethernet_handle "BUS_INTERFACE" "LLINK0"]
 				set bus_type [xget_hw_value $bus_handle]
-				debug 8 "$bus_handle --$bus_type "
+#				debug 8 "$bus_handle --$bus_type "
 #initiator is ll_temac
 #				set slave_ips [xget_hw_connected_busifs_handle $mhs_handle $bus_type "INITIATOR"]
 #				puts "$slave_ips"
 #target is mpmc
 				set llink_bus [xget_hw_connected_busifs_handle $mhs_handle $bus_type "TARGET"]
-				debug 8 "handle of parent bus is $llink_bus"
+#				debug 8 "handle of parent bus is $llink_bus"
 #name of bus interface
 				set llink_name [xget_hw_name $llink_bus]
-				debug 8 "Name of parent interface: $llink_name"
+#				debug 8 "Name of parent interface: $llink_name"
 #get mpmc handle
 				set llink_handle [xget_hw_parent_handle $llink_bus]
 
 				set connected_ip_name [xget_hw_name $llink_handle]
 				set connected_ip_type [xget_hw_value $llink_handle]
 
-				debug 8 "connected ip_name: $connected_ip_name"
-				debug 8 "connected ip_type: $connected_ip_type"
+#				debug 8 "connected ip_name: $connected_ip_name"
+#				debug 8 "connected ip_type: $connected_ip_type"
 
 				if {$connected_ip_type == "mpmc" } {
 					set sdma [xget_sw_parameter_handle $llink_handle "C_SDMA_CTRL_BASEADDR"]
-					debug 8 "sdma: $sdma"
+#					debug 8 "sdma: $sdma"
 					if {[llength $sdma] != 0 } {
 						set mpmc [xget_hw_name $llink_handle]
-						debug 8 "mpmc is $mpmc"
+#						debug 8 "mpmc is $mpmc"
 	#I need to separate number of interface
 						set sdma_channel [string index "$llink_name" [expr [string length $llink_name] - 1]]
 						set sdma_name [xget_value $sdma "NAME"]
 						set sdma_name [string map -nocase {C_ ""} $sdma_name]
 						set sdma_base [xget_value $sdma "VALUE"]
-						debug 8 "$sdma_name $sdma_base"
+#						debug 8 "$sdma_name $sdma_base"
 	#channel count
 						set sdma_base [expr $sdma_base + [expr $sdma_channel * 0x80]]
 						set sdma_base [format "0x%08x" $sdma_base] 
@@ -575,27 +575,21 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 						set fifo [xget_sw_parameter_handle $llink_handle "C_BASEADDR"]
 						if {[llength $fifo] != 0 } {
 							set ll_fifo [xget_hw_name $llink_handle]
-							debug 8 "ll_fifo is $ll_fifo, $fifo"
+#							debug 8 "ll_fifo is $ll_fifo, $fifo"
 							set fifo_name [xget_value $fifo "NAME"]
 							set fifo_name [string map -nocase {C_ ""} $fifo_name]
 							set fifo_base [xget_value $fifo "VALUE"]
-							debug 8 "$fifo_name $fifo_base"
+#							debug 8 "$fifo_name $fifo_base"
 							puts $config_file "#define XILINX_LLTEMAC_FIFO_${fifo_name}\t${fifo_base}"
 						} else {
 							warning "your ll_temac is no connected properly"
 						}
 					}
 				} elseif {$connected_ip_type == "ppc440_virtex5"} {
-					puts "1"
 			                # Assumes only one PPC.
 			                if {[string match LLDMA? $llink_name]} {
-						puts "2"
 			                        set port_number [string range $llink_name 5 5]
-						puts "3"
 			                        set sdma_name "DMA$port_number"
-						puts "4"
-						puts "sdma_name:$sdma_name"
-						puts "5"
 			                } else {
 			                        error "found ll_temac connected to ppc440_virtex5, but can't find the port number!"
 			                }
