@@ -590,6 +590,13 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 			                if {[string match LLDMA? $llink_name]} {
 			                        set port_number [string range $llink_name 5 5]
 			                        set sdma_name "DMA$port_number"
+
+						# DCR regs for SDMA ports are 0x80, 0x98, ...
+						set baseaddr [expr 0x80 + 0x18*$port_number]
+
+						puts $config_file "#define XILINX_LLTEMAC_SDMA_USE_DCR\t1"
+						puts $config_file "#define XILINX_LLTEMAC_SDMA_CTRL_BASEADDR\t[format "0x%02x" ${baseaddr}]"
+
 			                } else {
 			                        error "found ll_temac connected to ppc440_virtex5, but can't find the port number!"
 			                }
