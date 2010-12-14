@@ -75,6 +75,11 @@ proc generate_uboot {os_handle} {
 	set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
 	set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
 	set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
+	if {[string match "petalinux_bsp_?" [exec basename $folder]]} {
+		set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
+		set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
+		set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
+	}
 	set folder [exec basename $folder]
 	puts $config_file "#define XILINX_BOARD_NAME\t$folder\n"
 
