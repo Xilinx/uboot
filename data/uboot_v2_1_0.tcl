@@ -286,13 +286,18 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		puts "ERROR Uart not specified. Please specific console"
 	} else {
 		set uart_handle [xget_sw_ipinst_handle_from_processor $proc_handle $uart]
-		puts $config_file "/* Uart pheriphery is $uart */"
+		# count uartlite/uart16500 ips for serial multi support
+		set uartlite_count 0
+		set uart16550_count 0
+
+		puts $config_file "/* Uart console is $uart */"
 		set type [xget_value $uart_handle "VALUE"]
 		switch $type {
 			"axi_uart16550" {
 				puts $config_file "#define XILINX_UART16550"
 				puts $config_file "#define XILINX_UART16550_BASEADDR\t[uboot_addr_hex $uart_handle "C_BASEADDR"]"
 				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
+				incr uart16550_count
 			}
 			"opb_uart16550" -
 			"xps_uart16550" {
@@ -300,6 +305,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 				set addr [expr [uboot_addr_hex $uart_handle "C_BASEADDR"] + 3]
 				puts $config_file "#define XILINX_UART16550_BASEADDR\t[format "0x%08x" $addr]"
 				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
+				incr uart16550_count
 			}
 			"opb_uartlite" -
 			"xps_uartlite" -
@@ -323,6 +329,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 						default	{}
 					}
 				}
+				incr uartlite_count
 			}
 			"opb_mdm" -
 			"mdm" -
@@ -341,10 +348,76 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 					}
 				}
 				puts $config_file "#define XILINX_UARTLITE_BAUDRATE\t115200"
+				incr uartlite_count
 			}
 			default {
 				error "Unsupported type of console - $type"
 			}
+		}
+
+		# Load all IPs connected to cpu BUS, ips variable stores all of them
+		set mhs_handle [xget_hw_parent_handle $uart_handle]
+		set hwproc_handle [xget_handle $proc_handle "IPINST"]
+		set ips ""
+		set bus_name [xget_hw_busif_value $hwproc_handle "M_AXI_DC"]
+		if { [string compare -nocase $bus_name ""] != 0 } {
+			set ips [xget_hw_connected_busifs_handle $mhs_handle $bus_name "slave"]
+		}
+		set bus_name [xget_hw_busif_value $hwproc_handle "DPLB"]
+		if { [string compare -nocase $bus_name ""] != 0 } {
+			set ips [xget_hw_connected_busifs_handle $mhs_handle $bus_name "slave"]
+		}
+		set bus_name [xget_hw_busif_value $hwproc_handle "DOPB"]
+		if { [string compare -nocase $bus_name ""] != 0 } {
+			set ips [xget_hw_connected_busifs_handle $mhs_handle $bus_name "slave"]
+		}
+
+		foreach ip $ips {
+			set ip_handle [xget_hw_parent_handle $ip]
+			# do not generate console setting
+			if {[ string match -nocase $ip_handle $uart_handle ]} {
+				continue;
+			}
+			set type [xget_value $ip_handle "VALUE"]
+			switch $type {
+				"axi_uart16550" -
+				"opb_uart16550" -
+				"xps_uart16550" {
+					if {[ string match -nocase $type "axi_uart16550" ]} {
+						set addr [expr [uboot_addr_hex $ip_handle "C_BASEADDR"] + 0x1000]
+					} else {
+						set addr [expr [uboot_addr_hex $ip_handle "C_BASEADDR"] + 0x1003]
+					}
+					set val [expr $uart16550_count + 1]
+					puts $config_file "#define CONFIG_SYS_NS16550_COM$val\t\t[format "0x%08x" $addr]"
+					if {[ string match -nocase $uart16550_count "0" ]} {
+						puts $config_file "#define CONFIG_SYS_NS16550_CLK\t\t[clock_val $ip_handle]"
+					}
+					incr uart16550_count
+				}
+				"opb_uartlite" -
+				"xps_uartlite" -
+				"axi_uartlite" -
+				"opb_mdm" -
+				"mdm" -
+				"xps_mdm" {
+					if {[ string match -nocase $uartlite_count "0" ]} {
+						puts $config_file "#define XILINX_UARTLITE_BASEADDR\t[uboot_addr_hex $ip_handle "C_BASEADDR"]"
+					} else {
+						puts $config_file "#define XILINX_UARTLITE_BASEADDR$uartlite_count\t[uboot_addr_hex $ip_handle "C_BASEADDR"]"
+					}
+					incr uartlite_count
+				}
+			}
+		}
+		if { $uart16550_count > 0 } {
+			puts $config_file "#define CONFIG_CONS_INDEX\t\t$uart16550_count"
+		}
+		if { $uartlite_count > 4 } {
+			error "Unsupported number of uartlite IPs : $uartlite_count"
+		}
+		if { $uart16550_count > 4 } {
+			error "Unsupported number of uart16550 IPs : $uart16550_count"
 		}
 	}
 	puts $config_file ""
