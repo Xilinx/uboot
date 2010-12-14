@@ -359,7 +359,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		set mhs_handle [xget_hw_parent_handle $uart_handle]
 		set hwproc_handle [xget_handle $proc_handle "IPINST"]
 		set ips ""
-		set bus_name [xget_hw_busif_value $hwproc_handle "M_AXI_DC"]
+		set bus_name [xget_hw_busif_value $hwproc_handle "M_AXI_DP"]
 		if { [string compare -nocase $bus_name ""] != 0 } {
 			set ips [xget_hw_connected_busifs_handle $mhs_handle $bus_name "slave"]
 		}
