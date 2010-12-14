@@ -1,7 +1,7 @@
 #
 # EDK BSP board generation for U-boot supporting Microblaze and PPC
 #
-# (C) Copyright 2007-2008 Michal Simek
+# (C) Copyright 2007-2010 Michal Simek
 # (C)		2009-2010 John Williams <john.williams@petalogix.com>
 # (C)		2009-2010 PetaLogix Qld Pty Ltd
 #
