@@ -394,10 +394,10 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 		set main_mem_handle [xget_sw_ipinst_handle_from_processor $proc_handle $main_mem]
 		if {[string compare -nocase $main_mem_handle ""] != 0} {
 			switch [xget_hw_value $main_mem_handle] {
-				"mpmc" { 
+				"mpmc" {
 					set base_param_name "C_MPMC_BASEADDR"
 					set high_param_name "C_MPMC_HIGHADDR"
-				} 
+				}
 				"axi_s6_ddrx" {
 					set base_param_name [format "C_S%i_AXI_BASEADDR" $main_mem_bank]
 					set high_param_name [format "C_S%i_AXI_HIGHADDR" $main_mem_bank]
@@ -590,7 +590,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 #						debug 8 "$sdma_name $sdma_base"
 	#channel count
 						set sdma_base [expr $sdma_base + [expr $sdma_channel * 0x80]]
-						set sdma_base [format "0x%08x" $sdma_base] 
+						set sdma_base [format "0x%08x" $sdma_base]
 						puts $config_file "#define XILINX_LLTEMAC_${sdma_name}\t${sdma_base}"
 					} else {
 						set fifo [xget_sw_parameter_handle $llink_handle "C_BASEADDR"]
