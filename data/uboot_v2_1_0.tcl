@@ -303,9 +303,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 			}
 			"opb_uartlite" -
 			"xps_uartlite" -
-			"axi_uartlite" -
-			"opb_mdm" -
-			"xps_mdm" {
+			"axi_uartlite" {
 				set args [xget_sw_parameter_handle $uart_handle "*"]
 				foreach arg $args {
 					set arg_name [xget_value $arg "NAME"]
@@ -325,6 +323,24 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 						default	{}
 					}
 				}
+			}
+			"opb_mdm" -
+			"mdm" -
+			"xps_mdm" {
+				set args [xget_sw_parameter_handle $uart_handle "*"]
+				foreach arg $args {
+					set arg_name [xget_value $arg "NAME"]
+					set arg_value [xget_value $arg "VALUE"]
+					set arg_name [string map -nocase {C_ ""} $arg_name]
+					case $arg_name in {
+						"BASEADDR" {
+							puts $config_file "#define XILINX_UARTLITE_${arg_name}\t$arg_value"
+							set uart_base $arg_value
+						}
+						default	{}
+					}
+				}
+				puts $config_file "#define XILINX_UARTLITE_BAUDRATE\t115200"
 			}
 			default {
 				error "Unsupported type of console - $type"
