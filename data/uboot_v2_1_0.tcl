@@ -718,7 +718,14 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 				}
 			}
 			"axi_ethernet" {
-				puts "WARNING: stubbed support for AXI ethernet"
+				set mhs_handle [xget_hw_parent_handle $ethernet_handle]
+				puts $config_file "#define XILINX_AXIEMAC_BASEADDR\t\t\t[uboot_addr_hex $ethernet_handle "C_BASEADDR"]"
+				# Find out AXI DMA addr
+				set axiethernet_busif_handle [xget_hw_busif_handle $ethernet_handle "AXI_STR_TXD"]
+				set axiethernet_name [xget_hw_value $axiethernet_busif_handle]
+				set axiethernet_ip_handle [xget_hw_connected_busifs_handle $mhs_handle $axiethernet_name "INITIATOR"]
+				set connected_ip_handle [xget_hw_parent_handle $axiethernet_ip_handle]
+				puts $config_file "#define XILINX_AXIDMA_BASEADDR\t\t\t[uboot_addr_hex $connected_ip_handle "C_BASEADDR"]"
 			}
 			default {
 				error "Unsupported ethernet periphery - $ethernet_name"
