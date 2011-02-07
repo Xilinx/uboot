@@ -86,9 +86,7 @@ proc generate_uboot {os_handle} {
 	# ******************************************************************************
 	# print system clock
 	set proc_handle [xget_libgen_proc_handle]
-	set hwproc_handle [xget_handle $proc_handle "IPINST"]
-	puts $config_file "/* System Clock Frequency */"
-	puts $config_file "#define XILINX_CLOCK_FREQ\t[clock_val $hwproc_handle]\n"
+	set cpu_freq [clock_val [xget_handle $proc_handle "IPINST"]]
 
 	# Microblaze
 	set hwproc_handle [xget_handle $proc_handle "IPINST"]
@@ -191,7 +189,7 @@ proc generate_uboot {os_handle} {
 
 	puts $config_file ""
 	# Note final param (system_bus) is not used, just blank it off for now
-	uboot_intc $os_handle $proc_handle $config_file $config_file2 ""
+	uboot_intc $os_handle $proc_handle $config_file $config_file2 $cpu_freq ""
 
 	close $config_file
 	close $config_file2
@@ -211,7 +209,7 @@ proc uboot_value {handle name} {
 }
 
 
-proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
+proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus} {
 	global proctype
 # ******************************************************************************
 # Interrupt controler
@@ -272,12 +270,23 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 system_bus} {
 			puts $config_file "/* Timer pheriphery is $timer */"
 			puts $config_file "#define XILINX_TIMER_BASEADDR\t[uboot_addr_hex $timer_handle "C_BASEADDR"]"
 
-#			puts "$timer_handle $intc $intc_value $intc_signals Interrupt"
+#			puts "$timer_handle [xget_hw_value $timer_handle]"
 			set intr [get_intr $timer_handle $intc_handle $intc_value "Interrupt"]
 			puts $config_file "#define XILINX_TIMER_IRQ\t$intr"
+
+			if { [xget_hw_value $timer_handle] == "axi_timer"} {
+				set clkhandle [xget_hw_port_handle $timer_handle "S_AXI_ACLK"]
+				if {[string compare -nocase $clkhandle ""] != 0} {
+					set freq [xget_hw_subproperty_value $clkhandle "CLK_FREQ_HZ"]
+				}
+			}
 		}
 		puts $config_file ""
 	}
+
+	puts $config_file "/* System Timer Clock Frequency */"
+	puts $config_file "#define XILINX_CLOCK_FREQ\t$freq\n"
+
 # ******************************************************************************
 # UartLite driver - I suppose, only uartlite driver
 	set uart [xget_sw_parameter_value $os_handle "stdout"]
