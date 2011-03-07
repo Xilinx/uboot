@@ -559,12 +559,12 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				set flash_size [expr $flash_end - $flash_start + 1]
 				set flash_start [format "0x%08x" $flash_start]
 				set flash_size [format "0x%08x" $flash_size]
-				if {$eram_base < $flash_start} {
+			#	if {$eram_base < $flash_start} {
 					puts $config_file "#define XILINX_FLASH_START\t$flash_start"
 					puts $config_file "#define XILINX_FLASH_SIZE\t$flash_size"
-				} else {
-					error "Flash base address must be on higher address than ram memory"
-				}
+			#	} else {
+			#		error "Flash base address must be on higher address than ram memory"
+			#	}
 			}
 			default {
 				error "Unknown flash memory interface type $flash_type"
