@@ -59,6 +59,21 @@ proc get_clock_frequency {ip_handle portname} {
 	return $clk
 }
 
+# Extract the board/project name from an XML hwspec
+# FIXME lots more error checking required
+proc board_from_xml {hwspec} {
+	# Glob match the HWSPEC just in case
+	set hwspec [glob ${hwspec}]
+
+	# Look for the SYSTEMINFO XML tag
+	set test "[exec cat ${hwspec} | grep SYSTEMINFO ]"
+	set first [string first "SOURCE" "$test"]
+	set last [string last ".xmp" "$test" ]
+	set folder [string range $test $first $last]
+	set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
+	return "[exec basename $folder]"
+}
+
 proc generate_uboot {os_handle} {
 	global proctype
 	puts "\#--------------------------------------"
@@ -71,37 +86,48 @@ proc generate_uboot {os_handle} {
 	set config_file [open "xparameters.h" w]
 	headerc $config_file
 
+	# TCL always runs 3 levels down from the top
 	set folder "[exec pwd]"
 	set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
 	set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
 	set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
-	if {[string match "petalinux_bsp_?" [exec basename $folder]]} {
-		# keep it for non SDK project
-		set project_name "hw_platform_0"
-		if { [file isfile $folder/.project] } {
-			# parse project name
-			set test "[exec cat $folder/.project | grep "project>" ]"
-			# Extract project name: for example from: <project>hw_platform_0</project>
-			# find out the first > and last <
-			set first [string first ">" "$test"]
-			set last [string last "<" "$test" ]
-			set project_name [string range $test [expr $first + 1] [expr $last - 1] ]
-		}
 
+	# There are 3 possible cases
+	# 1. This is an XSDK BSP, 'folder' is the BSP directory in the workspace
+	# 2. This is an old-style XPS project, 'folder' is the HW project directory
+	# 3. This is an appguru build, 'folder' is jsut the dir where appguru created our BSP
+	
+	# Case #1 - XSDK workspace hacking
+	# Check for XSDK .project file - this will be an XSDK project
+	if { [file isfile $folder/.project] } {
+		# parse project name
+		set test "[exec cat $folder/.project | grep "project>" ]"
+		# Extract project name: for example from: <project>hw_platform_0</project>
+		# find out the first > and last <
+		set first [string first ">" "$test"]
+		set last [string last "<" "$test" ]
+		set project_name [string range $test [expr $first + 1] [expr $last - 1] ]
+		
+		# Now we known the name of the XSDK HW project, find it, and the system.xml
+	
+		# Go 1 directory up, this should be the workspace
 		set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
 		if { [file isdirectory $folder/$project_name] } {
-			set test "[exec cat $folder/$project_name/system.xml | grep SYSTEMINFO ]"
-			set first [string first "SOURCE" "$test"]
-			set last [string last ".xmp" "$test" ]
-			set folder [string range $test $first $last]
-			set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
+			# FIXME is it always called system.xml?  Potentially just change to *.xml
+			set board_name "[board_from_xml $folder/$project_name/*.xml]"
 		} else {
-			set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
-			set folder [string range $folder 0 [expr [string last "/" $folder] - 1]]
+			error "Unable to find XSDK HW project $project_name"
 		}
+	} elseif { [file isfile $folder/*.xmp] } {
+		# FIXME - assume presence of any XMP file indicates an old-style XPS project
+		set board_name [exec basename $folder]
+	} else {
+		# This must be the appguru flow.  Find HWSPEC from the Makefile
+		set hwspec "[exec grep "^HWSPEC" $folder/Makefile | cut -d " " -f 3]"
+		set board_name [board_from_xml $hwspec]
 	}
-	set folder [exec basename $folder]
-	puts $config_file "#define XILINX_BOARD_NAME\t$folder\n"
+
+	puts $config_file "#define XILINX_BOARD_NAME\t$board_name\n"
 
 	# ******************************************************************************
 	# print system clock
