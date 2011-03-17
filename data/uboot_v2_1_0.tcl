@@ -61,6 +61,7 @@ proc get_clock_frequency {ip_handle portname} {
 
 proc generate_uboot {os_handle} {
 	global proctype
+	global board_name
 	puts "\#--------------------------------------"
 	puts "\# uboot BSP generate..."
 	puts "\#--------------------------------------"
@@ -70,27 +71,6 @@ proc generate_uboot {os_handle} {
 	headerm $config_file2
 	set config_file [open "xparameters.h" w]
 	headerc $config_file
-
-	# Generate a namespace with our petalogix library functions
-	# We search ${PETALINUX}/hardware/edk_user_repository first, then $MYXILINX (colon seperated)
-	namespace eval petalogix-lib {
-		global env
-		set path ${env(PETALINUX)}/hardware/edk_user_repository:${env(MYXILINX)}
-		foreach p [split $path :] {
-			set f $p/PetaLogix/bsp/petalogix-lib_v1_00_a/data/petalogix-lib_v2_1_0.tcl
-			set result [catch {source $f}]
-			case $result {
-				0 { break }
-				1 { continue }
-				default {error "Unknown error"}
-			}
-		}
-		if { ${result} } {
-			error "Unable to load PetaLogix TCL library functions - please ensure \$PETALINUX or \$MYXILINX is set"
-		}
-	}
-
-	set board_name [petalogix-lib::get_board_name]
 
 	puts $config_file "#define XILINX_BOARD_NAME\t$board_name\n"
 
