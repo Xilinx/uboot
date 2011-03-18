@@ -72,7 +72,7 @@ proc generate_uboot {os_handle} {
 	set config_file [open "xparameters.h" w]
 	headerc $config_file
 
-	puts $config_file "#define XILINX_BOARD_NAME\t$board_name\n"
+	puts $config_file "#define XILINX_BOARD_NAME\t\"$board_name\"\n"
 
 	# ******************************************************************************
 	# print system clock
