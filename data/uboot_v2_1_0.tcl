@@ -694,6 +694,10 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 			                } else {
 			                        error "found ll_temac connected to ppc440_virtex5, but can't find the port number!"
 			                }
+				} elseif {$connected_ip_type == "xps_ll_fifo"} {
+					set fifo  [xget_sw_parameter_handle $llink_handle "C_BASEADDR"]
+					set fifo_base [xget_value $fifo "VALUE"]
+					puts $config_file "#define XILINX_LLTEMAC_FIFO_BASEADDR\t${fifo_base}"
 				}
 			}
 			"opb_ethernetlite" -
