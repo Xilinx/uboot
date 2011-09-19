@@ -27,8 +27,6 @@
 
 # Globals variable
 set version "U-BOOT v4.00.c"
-set cpunumber 0
-set periphery_array ""
 
 set proctype ""
 
