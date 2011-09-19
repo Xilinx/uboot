@@ -26,9 +26,9 @@
 #
 
 # Globals variable
-set version "U-BOOT v4.00.c"
+variable version "U-BOOT v4.00.c"
 
-set proctype ""
+variable proctype ""
 
 proc bsp_drc {os_handle} {
 	puts "\#--------------------------------------"
