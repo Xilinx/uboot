@@ -469,7 +469,8 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 					set base_param_name "C_MPMC_BASEADDR"
 					set high_param_name "C_MPMC_HIGHADDR"
 				}
-				"axi_v6_ddrx" {
+				"axi_v6_ddrx" -
+				"axi_7series_ddrx" {
 					set base_param_name "C_S_AXI_BASEADDR"
 					set high_param_name "C_S_AXI_HIGHADDR"
 				}
