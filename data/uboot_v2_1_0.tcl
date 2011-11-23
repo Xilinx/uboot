@@ -305,17 +305,11 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 		puts $config_file "/* Uart console is $uart */"
 		set type [xget_value $uart_handle "VALUE"]
 		switch $type {
-			"axi_uart16550" {
-				puts $config_file "#define XILINX_UART16550"
-				puts $config_file "#define XILINX_UART16550_BASEADDR\t[uboot_addr_hex $uart_handle "C_BASEADDR"]"
-				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
-				incr uart16550_count
-			}
+			"axi_uart16550" -
 			"opb_uart16550" -
 			"xps_uart16550" {
 				puts $config_file "#define XILINX_UART16550"
-				set addr [expr [uboot_addr_hex $uart_handle "C_BASEADDR"] + 3]
-				puts $config_file "#define XILINX_UART16550_BASEADDR\t[format "0x%08x" $addr]"
+				puts $config_file "#define XILINX_UART16550_BASEADDR\t[uboot_addr_hex $uart_handle "C_BASEADDR"]"
 				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
 				incr uart16550_count
 			}
@@ -395,11 +389,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				"axi_uart16550" -
 				"opb_uart16550" -
 				"xps_uart16550" {
-					if {[ string match -nocase $type "axi_uart16550" ]} {
-						set addr [expr [uboot_addr_hex $ip_handle "C_BASEADDR"] + 0x1000]
-					} else {
-						set addr [expr [uboot_addr_hex $ip_handle "C_BASEADDR"] + 0x1003]
-					}
+					set addr [expr [uboot_addr_hex $ip_handle "C_BASEADDR"] + 0x1000]
 					set val [expr $uart16550_count + 1]
 					puts $config_file "#define CONFIG_SYS_NS16550_COM$val\t\t[format "0x%08x" $addr]"
 					if {[ string match -nocase $uart16550_count "0" ]} {
