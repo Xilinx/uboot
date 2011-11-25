@@ -129,25 +129,39 @@ proc generate_uboot {os_handle} {
 					USE_BARREL {
 						if {[string match $arg_value "1"]} {
 							puts $config_file2 "PLATFORM_CPPFLAGS += -mxl-barrel-shift"
+						} else {
+							puts $config_file2 "PLATFORM_CPPFLAGS += -mno-xl-barrel-shift"
 						}
 					}
 					USE_DIV {
 						if {[string match $arg_value "1"]} {
 							puts $config_file2 "PLATFORM_CPPFLAGS += -mno-xl-soft-div"
+						} else {
+							puts $config_file2 "PLATFORM_CPPFLAGS += -mxl-soft-div"
 						}
 						#FIXME What is -mno-xl-hard-div
 					}
 					USE_HW_MUL {
-						if {[string match $arg_value "1"]} {
-							puts $config_file2 "PLATFORM_CPPFLAGS += -mno-xl-soft-mul"
-						} else {
-							puts $config_file2 "PLATFORM_CPPFLAGS += -mxl-soft-mul"
+						case $arg_value in {
+							"2" {
+								puts $config_file2 "PLATFORM_CPPFLAGS += -mxl-multiply-high"
+								puts $config_file2 "PLATFORM_CPPFLAGS += -mno-xl-soft-mul"
+							}
+							"1" {
+								puts $config_file2 "PLATFORM_CPPFLAGS += -mno-xl-multiply-high"
+								puts $config_file2 "PLATFORM_CPPFLAGS += -mno-xl-soft-mul"
+							}
+							default {
+								puts $config_file2 "PLATFORM_CPPFLAGS += -mxl-soft-mul"
+							}
 						}
 						#FIXME What is -mxl-multiply-high???
 					}
 					USE_PCMP_INSTR {
 						if {[string match $arg_value "1"]} {
 							puts $config_file2 "PLATFORM_CPPFLAGS += -mxl-pattern-compare"
+						} else {
+							puts $config_file2 "PLATFORM_CPPFLAGS += -mno-xl-pattern-compare"
 						}
 					}
 					USE_FPU {
