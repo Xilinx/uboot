@@ -530,16 +530,17 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 		# Handle different FLASHs differently
 		switch -exact $flash_type {
 			"axi_spi" -
+			"axi_quad_spi" -
 			"xps_spi" {
 				# SPI FLASH
 				# Set the SPI FLASH's SPI controller's base address.
 				set spi_start [xget_sw_parameter_value $flash_mem_handle "C_BASEADDR"]
 				puts $config_file "#define XILINX_SPI_FLASH_BASEADDR\t$spi_start"
 				# Set the SPI FLASH clock frequency
-				if { $flash_type == "axi_spi" } {
-					set sys_clk [get_clock_frequency $flash_mem_handle "S_AXI_ACLK"]
-				} else {
+				if { $flash_type == "xps_spi" } {
 					set sys_clk [get_clock_frequency $flash_mem_handle "SPLB_Clk"]
+				} else {
+					set sys_clk [get_clock_frequency $flash_mem_handle "S_AXI_ACLK"]
 				}
 				set sck_ratio [xget_sw_parameter_value $flash_mem_handle "C_SCK_RATIO"]
 				set sck [expr { $sys_clk / $sck_ratio }]
