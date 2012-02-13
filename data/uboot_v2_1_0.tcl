@@ -3,7 +3,7 @@
 #
 # (C) Copyright 2007-2010 Michal Simek
 # (C)		2009-2010 John Williams <john.williams@petalogix.com>
-# (C)		2009-2010 PetaLogix Qld Pty Ltd
+# (C)		2009-2012 PetaLogix Qld Pty Ltd
 #
 # Michal SIMEK <monstr@monstr.eu>
 #
@@ -75,6 +75,7 @@ proc generate_uboot {os_handle} {
 	# ******************************************************************************
 	# print system clock
 	set proc_handle [xget_libgen_proc_handle]
+	# FIXME: this does not work with Zynq but generate later
 	set cpu_freq [clock_val [xget_handle $proc_handle "IPINST"]]
 
 	# Microblaze
@@ -185,6 +186,13 @@ proc generate_uboot {os_handle} {
 			# Write only name of instance
 			puts $config_file "/* PPC is [xget_hw_parameter_value $hwproc_handle "INSTANCE"] */"
 		}
+		"ps7_cortexa9" {
+			# Write only name of instance
+			puts $config_file "/* ARM is [xget_hw_parameter_value $hwproc_handle "INSTANCE"] */"
+			set cpu_freq [uboot_value $hwproc_handle C_CPU_CLK_FREQ_HZ]
+			# FIXME: check if we can change this name as this value maybe used by other drivers
+			puts $config_file  "#define XPAR_CPU_CORTEXA9_CORE_CLOCK_FREQ_HZ\t$cpu_freq" 
+		}
 		default {
 			error "This type of CPU is not supported by U-BOOT yet"
 		}
@@ -229,6 +237,10 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 		"ppc440_virtex5" {
 			set intc_handle [get_handle_to_intc $proc_handle "EICC440EXTIRQ"]
 		}
+
+		"ps7_cortexa9" {
+			set intc_handle [get_handle_to_ps7_core $proc_handle "ps7_scugic"]
+		}
 	}
 
 
@@ -236,33 +248,59 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 		puts $config_file "/* Interrupt controller not defined */"
 	} else {
 		puts $config_file "/* Interrupt controller is [xget_hw_name $intc_handle] */"
-#FIXME redesign test_buses - give name of buses from IP
-		test_buses $system_bus $intc_handle "SOPB"
-#		Interrupt controller address
-		puts $config_file "#define XILINX_INTC_BASEADDR\t\t[uboot_addr_hex $intc_handle "C_BASEADDR"]"
+		switch $proctype {
+			# FIXME: this is hacky to detect the interrupt controller
+			"ps7_cortexa9" {
+				puts $config_file "#define XILINX_PS7_INTC_BASEADDR\t\t[uboot_addr_hex $intc_handle "C_S_AXI_BASEADDR"]"
+			}
+			default {
+				#FIXME redesign test_buses - give name of buses from IP
+				test_buses $system_bus $intc_handle "SOPB"
+				#Interrupt controller address
+				puts $config_file "#define XILINX_INTC_BASEADDR\t\t[uboot_addr_hex $intc_handle "C_BASEADDR"]"
 
-		set intc_value [uboot_value $intc_handle "C_NUM_INTR_INPUTS"]
-		puts $config_file "#define XILINX_INTC_NUM_INTR_INPUTS\t$intc_value"
-		set intc_value [expr $intc_value - 1]
+				set intc_value [uboot_value $intc_handle "C_NUM_INTR_INPUTS"]
+				puts $config_file "#define XILINX_INTC_NUM_INTR_INPUTS\t$intc_value"
+				set intc_value [expr $intc_value - 1]
 
-		set port_list [xget_port_by_subtype $intc_handle "*"]
-		foreach port $port_list {
-			set name [xget_value $port "NAME"]
-			if {[string match -nocase $name "intr"]} {
-				set intc_irq [xget_value $port "VALUE"]
-#DEBUG				puts $config_file "/* pripojene interrupty $name=$intc_irq */"
-				set intc_signals [split $intc_irq "&"]
-#				split the signals
-#				DEBUG	puts $config_file "$signals"
+				set port_list [xget_port_by_subtype $intc_handle "*"]
+				foreach port $port_list {
+					set name [xget_value $port "NAME"]
+					if {[string match -nocase $name "intr"]} {
+						set intc_irq [xget_value $port "VALUE"]
+#DEBUG						puts $config_file "/* pripojene interrupty $name=$intc_irq */"
+						set intc_signals [split $intc_irq "&"]
+#						split the signals
+#					DEBUG	puts $config_file "$signals"
+					}
+				}
 			}
 		}
 		puts $config_file ""
+
 # ****************************************************************************
 # Timer part
 # handle timer if exists intc
 		set timer [xget_sw_parameter_value $os_handle "timer"]
 		if {[string match "" $timer] || [string match -nocase "none" $timer]} {
-			puts $config_file "/* Timer not defined */"
+			# FIXME: hack to find the ttc and scutimer
+			switch $proctype {
+				"ps7_cortexa9" {
+					set ttc_handle [get_handle_to_ps7_core $proc_handle "ps7_ttc"]
+					set timer [xget_hw_name $ttc_handle]
+					puts $config_file "/* Timer pheriphery is $timer */"
+					puts $config_file "#define XILINX_PS7_TTC_BASEADDR\t\t[uboot_addr_hex $ttc_handle "C_S_AXI_BASEADDR"]"
+
+					puts $config_file ""
+					set scutimer_handle [get_handle_to_ps7_core $proc_handle "ps7_scutimer"]
+					set timer [xget_hw_name $scutimer_handle]
+					puts $config_file "/* SCU Timer pheriphery is $timer */"
+					puts $config_file "#define XPAR_SCUTIMER_BASEADDR\t\t[uboot_addr_hex $scutimer_handle "C_S_AXI_BASEADDR"]"
+				}
+				default {
+					puts $config_file "/* Timer not defined */"
+				}
+			}
 		} else {
 			set timer_handle [xget_sw_ipinst_handle_from_processor $proc_handle $timer]
 			#test for correct system bus
@@ -288,7 +326,11 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 	}
 
 	puts $config_file "/* System Timer Clock Frequency */"
-	puts $config_file "#define XILINX_CLOCK_FREQ\t$freq\n"
+	if {[string match ps7_cortexa9 $proctype]} {
+		puts $config_file "#define XILINX_PS7_CLOCK_FREQ\t[expr $freq/2]\n"
+	} else {
+		puts $config_file "#define XILINX_CLOCK_FREQ\t$freq\n"
+	}
 
 # ******************************************************************************
 # UartLite driver - I suppose, only uartlite driver
@@ -301,6 +343,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 		# count uartlite/uart16500 ips for serial multi support
 		set uartlite_count 0
 		set uart16550_count 0
+		set ps7uart_count 0
 
 		puts $config_file "/* Uart console is $uart */"
 		set type [xget_value $uart_handle "VALUE"]
@@ -312,6 +355,12 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				puts $config_file "#define XILINX_UART16550_BASEADDR\t[uboot_addr_hex $uart_handle "C_BASEADDR"]"
 				puts $config_file "#define XILINX_UART16550_CLOCK_HZ\t[clock_val $uart_handle]"
 				incr uart16550_count
+			}
+			"ps7_uart" {
+				puts $config_file "#define XILINX_PS7_UART"
+				puts $config_file "#define XILINX_PS7_UART_BASEADDR\t[uboot_addr_hex $uart_handle "C_S_AXI_BASEADDR"]"
+				puts $config_file "#define XILINX_PS7_UART_CLOCK_HZ\t[uboot_value $uart_handle "C_UART_CLK_FREQ_HZ"]"
+				incr ps7uart_count
 			}
 			"opb_uartlite" -
 			"xps_uartlite" -
@@ -397,6 +446,9 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 					}
 					incr uart16550_count
 				}
+				"ps7_uart" {
+					puts "============= multi uart?"
+				}
 				"opb_uartlite" -
 				"xps_uartlite" -
 				"axi_uartlite" -
@@ -429,15 +481,24 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 	if {[string match "" $iic] || [string match -nocase "none" $iic]} {
 		puts $config_file "/* IIC doesn't exist */"
 	} else {
-		set iic_handle [xget_sw_ipinst_handle_from_processor $proc_handle $iic]
-		set iic_baseaddr [xget_sw_parameter_value $iic_handle "C_BASEADDR"]
-		set iic_baseaddr [format "0x%08x" $iic_baseaddr]
-		set iic_freq [xget_sw_parameter_value $iic_handle "C_IIC_FREQ"]
-		set iic_bit [xget_sw_parameter_value $iic_handle "C_TEN_BIT_ADR"]
-		puts $config_file "/* IIC pheriphery is $iic */"
-		puts $config_file "#define XILINX_IIC_0_BASEADDR\t$iic_baseaddr"
-		puts $config_file "#define XILINX_IIC_0_FREQ\t$iic_freq"
-		puts $config_file "#define XILINX_IIC_0_BIT\t$iic_bit"
+		switch -regexp $iic {
+			"ps7_i2c" {
+				puts $config_file "/* IIC pheriphery is $iic */"
+				set iic_handle [xget_sw_ipinst_handle_from_processor $proc_handle $iic]
+				puts $config_file "#define XILINX_PS7_IIC_BASEADDR\t\t[uboot_addr_hex $iic_handle "C_S_AXI_BASEADDR"]"
+			}
+			default {
+				set iic_handle [xget_sw_ipinst_handle_from_processor $proc_handle $iic]
+				set iic_baseaddr [xget_sw_parameter_value $iic_handle "C_BASEADDR"]
+				set iic_baseaddr [format "0x%08x" $iic_baseaddr]
+				set iic_freq [xget_sw_parameter_value $iic_handle "C_IIC_FREQ"]
+				set iic_bit [xget_sw_parameter_value $iic_handle "C_TEN_BIT_ADR"]
+				puts $config_file "/* IIC pheriphery is $iic */"
+				puts $config_file "#define XILINX_IIC_0_BASEADDR\t$iic_baseaddr"
+				puts $config_file "#define XILINX_IIC_0_FREQ\t$iic_freq"
+				puts $config_file "#define XILINX_IIC_0_BIT\t$iic_bit"
+			}
+		}
 	}
 	puts $config_file ""
 	# ******************************************************************************
@@ -446,18 +507,47 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 	if {[string match "" $gpio] || [string match "none" $gpio]} {
 		puts $config_file "/* GPIO doesn't exist */"
 	} else {
-		set base_param_name [format "C_BASEADDR" $gpio]
-		set gpio_handle [xget_sw_ipinst_handle_from_processor $proc_handle $gpio]
-		set gpio_base [xget_sw_parameter_value $gpio_handle $base_param_name]
-		set gpio_base [format "0x%08x" $gpio_base]
+		switch -regexp $gpio {
+			"ps7_gpio" {
+				puts $config_file "/* GPIO is $gpio */"
+				set gpio_handle [xget_sw_ipinst_handle_from_processor $proc_handle $gpio]
+				puts $config_file "#define XILINX_PS7_GPIO_BASEADDR\t\t[uboot_addr_hex $gpio_handle "C_S_AXI_BASEADDR"]"
+			}
+			default {
+				set base_param_name [format "C_BASEADDR" $gpio]
+				set gpio_handle [xget_sw_ipinst_handle_from_processor $proc_handle $gpio]
+				set gpio_base [xget_sw_parameter_value $gpio_handle $base_param_name]
+				set gpio_base [format "0x%08x" $gpio_base]
 
-		set gpio_end [xget_sw_parameter_value $gpio_handle "C_HIGHADDR"]
-		set gpio_end [format "0x%08x" $gpio_end]
+				set gpio_end [xget_sw_parameter_value $gpio_handle "C_HIGHADDR"]
+				set gpio_end [format "0x%08x" $gpio_end]
 
-		puts $config_file "/* GPIO is $gpio*/"
-		puts $config_file "#define XILINX_GPIO_BASEADDR\t$gpio_base"
+				puts $config_file "/* GPIO is $gpio*/"
+				puts $config_file "#define XILINX_GPIO_BASEADDR\t$gpio_base"
+			}
+		}
 	}
 	puts $config_file ""
+
+	# ******************************************************************************
+	# SDIO driver
+	set sdio [xget_sw_parameter_value $os_handle "sdio"]
+	if {[string match "" $sdio] || [string match -nocase "none" $sdio]} {
+		puts $config_file "/* SDIO doesn't exist */"
+	} else {
+		switch -regexp $sdio {
+			"ps7_sd" {
+				puts $config_file "/* SDIO controller is $sdio */"
+				set sdio_handle [xget_sw_ipinst_handle_from_processor $proc_handle $sdio]
+				puts $config_file "#define XILINX_PS7_SDIO_BASEADDR\t\t[uboot_addr_hex $sdio_handle "C_S_AXI_BASEADDR"]"
+			}
+			default {
+				error "Unknown SDIO core $sdio"
+			}
+		}
+	}
+	puts $config_file ""
+
 	# ******************************************************************************
 	# System memory
 	set main_mem [xget_sw_parameter_value $os_handle "main_memory"]
@@ -489,12 +579,16 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				"axi_emc" {
 					set base_param_name [format "C_S_AXI_MEM%i_BASEADDR" $main_mem_bank]
 					set high_param_name [format "C_S_AXI_MEM%i_HIGHADDR" $main_mem_bank]
+				"ps7_ddr" {
+					set base_param_name "C_S_AXI_BASEADDR"
+					set high_param_name "C_S_AXI_HIGHADDR"
 				}
 				default {
 					set base_param_name [format "C_MEM%i_BASEADDR" $main_mem_bank]
 					set high_param_name [format "C_MEM%i_HIGHADDR" $main_mem_bank]
 				}
 			}
+
 			set eram_base [xget_sw_parameter_value $main_mem_handle $base_param_name]
 			set eram_end [xget_sw_parameter_value $main_mem_handle $high_param_name]
 			set eram_size [expr $eram_end - $eram_base + 1]
@@ -561,9 +655,25 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				puts $config_file "#define XILINX_FLASH_START\t$flash_start"
 				puts $config_file "#define XILINX_FLASH_SIZE\t$flash_size"
 			}
+			"ps7_emc" {
+				# FIXME: add ps7_emc
+				puts "========== find ps7_emc"
+			}
+			"ps7_qspi" {
+				# ZYNQ QSPI FLASH
+				# Set the SPI FLASH's SPI controller's base address.
+				set spi_start [xget_sw_parameter_value $flash_mem_handle "C_S_AXI_BASEADDR"]
+				puts $config_file "#define XILINX_PS7_QSPI_FLASH_BASEADDR\t$spi_start"
+				# Set the SPI FLASH clock frequency
+				set qspi_clk [uboot_value $flash_mem_handle "C_QSPI_CLK_FREQ_HZ"]
+				puts $config_file "#define XILINX_SPI_FLASH_MAX_FREQ\t$qspi_clk"
+				# Set the SPI FLASH chip select
+				global flash_memory_bank
+				puts $config_file "#define XILINX_SPI_FLASH_CS\t$flash_memory_bank"
+			}
 			default {
 				error "Unknown flash memory interface type $flash_type"
-				}
+			}
 		}
 	}
 	puts $config_file ""
@@ -738,6 +848,10 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				set axiethernet_ip_handle [xget_hw_connected_busifs_handle $mhs_handle $axiethernet_name "INITIATOR"]
 				set connected_ip_handle [xget_hw_parent_handle $axiethernet_ip_handle]
 				puts $config_file "#define XILINX_AXIDMA_BASEADDR\t\t\t[uboot_addr_hex $connected_ip_handle "C_BASEADDR"]"
+			}
+			"ps7_ethernet" {
+				set mhs_handle [xget_hw_parent_handle $ethernet_handle]
+				puts $config_file "#define XILINX_PS7_GEM_BASEADDR\t\t\t[uboot_addr_hex $ethernet_handle "C_S_AXI_BASEADDR"]"
 			}
 			default {
 				error "Unsupported ethernet periphery - $ethernet_name"
@@ -926,6 +1040,30 @@ proc get_handle_to_intc {proc_handle port_name} {
 	#	set name [xget_hw_name $intc]
 	#	puts "$intc $name"
 	return $intc
+}
+
+proc get_handle_to_ps7_core {proc_handle ip_instance} {
+	#one CPU handle
+	set hwproc_handle [xget_handle $proc_handle "IPINST"]
+	#hangle to mhs file
+	set mhs_handle [xget_hw_parent_handle $hwproc_handle]
+	#get handle to interrupt port on Microblaze
+	
+	set ip_handles [xget_hw_ipinst_handle $mhs_handle "*"]
+	# loop to find the ip instance
+	foreach slave $ip_handles {
+		set type [xget_hw_value $slave]
+		if {[string match -nocase $type $ip_instance]} {
+			set name [xget_hw_name $slave]
+			set core $slave
+			#puts "interrupt controller: $core - $name - $type"
+		}
+	}
+	if { [llength $name] == 0 } {
+		puts "CPU has no connection to Interrupt controller"
+		return
+	}
+	return $core
 }
 
 
