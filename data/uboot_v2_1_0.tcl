@@ -446,9 +446,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 					}
 					incr uart16550_count
 				}
-				"ps7_uart" {
-					puts "============= multi uart?"
-				}
+				"ps7_uart" -
 				"opb_uartlite" -
 				"xps_uartlite" -
 				"axi_uartlite" -
