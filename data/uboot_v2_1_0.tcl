@@ -577,6 +577,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				"axi_emc" {
 					set base_param_name [format "C_S_AXI_MEM%i_BASEADDR" $main_mem_bank]
 					set high_param_name [format "C_S_AXI_MEM%i_HIGHADDR" $main_mem_bank]
+				}
 				"ps7_ddr" {
 					set base_param_name "C_S_AXI_BASEADDR"
 					set high_param_name "C_S_AXI_HIGHADDR"
