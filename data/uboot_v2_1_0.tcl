@@ -884,7 +884,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 	puts $config_file2 ""
 	if {$text_base == 0} {
 		if {[llength $eram_base] != 0 } {
-			set half [format "0x%08x" [expr $eram_high - 0x100000 ]]
+			set half [format "0x%08x" [expr $eram_high - 0x400000 ]]
 			puts $config_file2 "TEXT_BASE = $half"
 			puts $config_file2 "CONFIG_SYS_TEXT_BASE = $half"
 			puts "INFO automatic U-BOOT position = $half"
