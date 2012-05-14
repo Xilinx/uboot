@@ -219,6 +219,16 @@ proc uboot_value {handle name} {
 	return $addr
 }
 
+proc uboot_set_phy_addr {os_handle_name ethernet config_file} {
+	set overrides [xget_sw_parameter_value $os_handle_name "periph_type_overrides"]
+
+	foreach over $overrides {
+		if { [lindex $over 0] == "phy" &&  [lindex $over 1] == $ethernet } {
+			puts $config_file "#define CONFIG_PHY_ADDR\t\t\t[format "0x%x" [lindex $over 2]]"
+			break
+		}
+	}
+}
 
 proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus} {
 	global proctype
@@ -873,10 +883,12 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				set axiethernet_ip_handle [xget_hw_connected_busifs_handle $mhs_handle $axiethernet_name "INITIATOR"]
 				set connected_ip_handle [xget_hw_parent_handle $axiethernet_ip_handle]
 				puts $config_file "#define XILINX_AXIDMA_BASEADDR\t\t\t[uboot_addr_hex $connected_ip_handle "C_BASEADDR"]"
+				uboot_set_phy_addr $os_handle $ethernet $config_file
 			}
 			"ps7_ethernet" {
 				set mhs_handle [xget_hw_parent_handle $ethernet_handle]
 				puts $config_file "#define XILINX_PS7_GEM_BASEADDR\t\t\t[uboot_addr_hex $ethernet_handle "C_S_AXI_BASEADDR"]"
+				uboot_set_phy_addr $os_handle $ethernet $config_file
 			}
 			default {
 				error "Unsupported ethernet periphery - $ethernet_name"
