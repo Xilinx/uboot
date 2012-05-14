@@ -549,7 +549,17 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 	# ******************************************************************************
 	# System memory
 	set main_mem [xget_sw_parameter_value $os_handle "main_memory"]
-	if {[string match "" $main_mem] || [string match "none" $main_mem]} {
+	set eram_base -1
+	set eram_size -1
+	# Try manual memory setup
+	set main_memory_start [xget_sw_parameter_value $os_handle "main_memory_start"]
+	set main_memory_size [xget_sw_parameter_value $os_handle "main_memory_size"]
+	set eram_base [expr ${main_memory_start}]
+	set eram_size [expr ${main_memory_size}]
+	if { $eram_base > 0 && $eram_size > 0 } {
+		set eram_base [format "0x%08x" $eram_base]
+		set eram_size [format "0x%08x" $eram_size]
+	} elseif {[string match "" $main_mem] || [string match "none" $main_mem]} {
 		puts "ERROR main_memory not specified. Please specific main_memory"
 		puts $config_file "/* Main Memory doesn't exist */"
 	} else {
@@ -583,8 +593,14 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 					set high_param_name "C_S_AXI_HIGHADDR"
 				}
 				default {
-					set base_param_name [format "C_MEM%i_BASEADDR" $main_mem_bank]
-					set high_param_name [format "C_MEM%i_HIGHADDR" $main_mem_bank]
+					if {$main_mem_bank >= 0} {
+						set base_param_name [format "C_MEM%i_BASEADDR" $main_mem_bank]
+						set high_param_name [format "C_MEM%i_HIGHADDR" $main_mem_bank]
+					} else {
+						# bankless memory
+						set base_param_name "C_BASEADDR"
+						set high_param_name "C_HIGHADDR"
+					}
 				}
 			}
 
@@ -593,13 +609,15 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 			set eram_size [expr $eram_end - $eram_base + 1]
 			set eram_base [format "0x%08x" $eram_base]
 			set eram_size [format "0x%08x" $eram_size]
-			set eram_high [expr $eram_base + $eram_size]
-			set eram_high [format "0x%08x" $eram_high]
-			puts "/* Main Memory is $main_mem */"
-			puts $config_file "/* Main Memory is $main_mem */"
-			puts $config_file "#define XILINX_RAM_START\t$eram_base"
-			puts $config_file "#define XILINX_RAM_SIZE\t\t$eram_size"
 		}
+	}
+	if { [expr $eram_base] > 0 && [expr $eram_size] > 0 } {
+		set eram_high [expr $eram_base + $eram_size]
+		set eram_high [format "0x%08x" $eram_high]
+		puts "/* Main Memory is $main_mem */"
+		puts $config_file "/* Main Memory is $main_mem */"
+		puts $config_file "#define XILINX_RAM_START\t$eram_base"
+		puts $config_file "#define XILINX_RAM_SIZE\t\t$eram_size"
 	}
 	puts $config_file ""
 	# ******************************************************************************
