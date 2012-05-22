@@ -616,20 +616,18 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 
 			set eram_base [xget_sw_parameter_value $main_mem_handle $base_param_name]
 			set eram_end [xget_sw_parameter_value $main_mem_handle $high_param_name]
+			# FIXME: this is workaround for Xilinx 14.1, This can be removed on 14.2
+			set EDK_VER [ exec xps -v | grep "Xilinx EDK" | cut -d " " -f 3 ]
+			if { $EDK_VER == "14.1" && [xget_hw_value $main_mem_handle] == "ps7_ddr"} {
+				set eram_base 0
+				set eram_high [expr $eram_end]
+			}
 			set eram_size [expr $eram_end - $eram_base + 1]
 			set eram_base [format "0x%08x" $eram_base]
 			set eram_size [format "0x%08x" $eram_size]
 		}
 	}
 	if { [expr $eram_base] > 0 && [expr $eram_size] > 0 } {
-		# FIXME: this is workaround for Xilinx 14.1, This can be removed on 14.2
-		set EDK_VER [ exec xps -v | grep "Xilinx EDK" | cut -d " " -f 3 ]
-		if { $EDK_VER == "14.1" && [xget_hw_value $main_mem_handle] == "ps7_ddr"} {
-			set eram_base 0
-			set eram_size [expr $eram_end + 1]
-			set eram_base [format "0x%08x" $eram_base]
-			set eram_size [format "0x%08x" $eram_size]
-		}
 		set eram_high [expr $eram_base + $eram_size]
 		set eram_high [format "0x%08x" $eram_high]
 		puts "/* Main Memory is $main_mem */"
