@@ -297,9 +297,13 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 			switch $proctype {
 				"ps7_cortexa9" {
 					set ttc_handle [get_handle_to_ps7_core $proc_handle "ps7_ttc"]
-					set timer [xget_hw_name $ttc_handle]
-					puts $config_file "/* Timer pheriphery is $timer */"
-					puts $config_file "#define XILINX_PS7_TTC_BASEADDR\t\t[uboot_addr_hex $ttc_handle "C_S_AXI_BASEADDR"]"
+					if {[string match "" $ttc_handle] } {
+						puts $config_file "/* Timer not defined */"
+					} else {
+						set timer [xget_hw_name $ttc_handle]
+						puts $config_file "/* Timer pheriphery is $timer */"
+						puts $config_file "#define XILINX_PS7_TTC_BASEADDR\t\t[uboot_addr_hex $ttc_handle "C_S_AXI_BASEADDR"]"
+					}
 
 					puts $config_file ""
 					set scutimer_handle [get_handle_to_ps7_core $proc_handle "ps7_scutimer"]
@@ -1086,6 +1090,8 @@ proc get_handle_to_ps7_core {proc_handle ip_instance} {
 	
 	set ip_handles [xget_hw_ipinst_handle $mhs_handle "*"]
 	# loop to find the ip instance
+
+	set name ""
 	foreach slave $ip_handles {
 		set type [xget_hw_value $slave]
 		if {[string match -nocase $type $ip_instance]} {
@@ -1095,7 +1101,7 @@ proc get_handle_to_ps7_core {proc_handle ip_instance} {
 		}
 	}
 	if { [llength $name] == 0 } {
-		puts "CPU has no connection to Interrupt controller"
+		puts "CPU has no connection to Interrupt controller or $ip_instance doesn't exist in the system"
 		return
 	}
 	return $core
