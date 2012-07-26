@@ -477,7 +477,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 			}
 		}
 		if { $uart16550_count > 0 } {
-			puts $config_file "#define CONFIG_CONS_INDEX\t\t$uart16550_count"
+			puts $config_file "#define CONFIG_CONS_INDEX\t\t1"
 		}
 		if { $uartlite_count > 4 } {
 			error "Unsupported number of uartlite IPs : $uartlite_count"
