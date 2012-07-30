@@ -191,7 +191,7 @@ proc generate_uboot {os_handle} {
 			puts $config_file "/* ARM is [xget_hw_parameter_value $hwproc_handle "INSTANCE"] */"
 			set cpu_freq [uboot_value $hwproc_handle C_CPU_CLK_FREQ_HZ]
 			# FIXME: check if we can change this name as this value maybe used by other drivers
-			puts $config_file  "#define XPAR_CPU_CORTEXA9_CORE_CLOCK_FREQ_HZ\t$cpu_freq" 
+			puts $config_file  "#define XPAR_CPU_CORTEXA9_CORE_CLOCK_FREQ_HZ\t$cpu_freq"
 		}
 		default {
 			error "This type of CPU is not supported by U-BOOT yet"
@@ -1087,7 +1087,7 @@ proc get_handle_to_ps7_core {proc_handle ip_instance} {
 	#hangle to mhs file
 	set mhs_handle [xget_hw_parent_handle $hwproc_handle]
 	#get handle to interrupt port on Microblaze
-	
+
 	set ip_handles [xget_hw_ipinst_handle $mhs_handle "*"]
 	# loop to find the ip instance
 
