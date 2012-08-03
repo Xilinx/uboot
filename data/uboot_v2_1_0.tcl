@@ -696,6 +696,10 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				# FIXME: add ps7_emc
 				puts "========== find ps7_emc"
 			}
+			"ps7_spi" {
+				# FIXME: add ps7_spi
+				puts "========== find ps7_spi"
+			}
 			"ps7_qspi" {
 				# ZYNQ QSPI FLASH
 				# Set the SPI FLASH's SPI controller's base address.
