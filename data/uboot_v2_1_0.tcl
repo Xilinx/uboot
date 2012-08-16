@@ -701,8 +701,11 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				# Set the SPI FLASH's SPI controller's base address.
 				set spi_start [xget_sw_parameter_value $flash_mem_handle "C_S_AXI_BASEADDR"]
 				puts $config_file "#define XILINX_PS7_QSPI_FLASH_BASEADDR\t$spi_start"
-				# Set the SPI FLASH clock frequency
-				set qspi_clk [uboot_value $flash_mem_handle "C_QSPI_CLK_FREQ_HZ"]
+				# Set the SPI Flash clock frequency, assume it will be
+				# half of the QSPI controller frequency.
+				# Note this is not the actual maximum SPI flash frequency
+				# as we can't know.
+				set qspi_clk [expr [uboot_value $flash_mem_handle "C_QSPI_CLK_FREQ_HZ"]/2]
 				puts $config_file "#define XILINX_SPI_FLASH_MAX_FREQ\t$qspi_clk"
 				# Set the SPI FLASH chip select
 				global flash_memory_bank
