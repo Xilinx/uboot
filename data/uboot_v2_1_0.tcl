@@ -291,52 +291,34 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 # ****************************************************************************
 # Timer part
 # handle timer if exists intc
-		set timer [xget_sw_parameter_value $os_handle "timer"]
-		if {[string match "" $timer] || [string match -nocase "none" $timer]} {
-			# FIXME: hack to find the ttc and scutimer
-			switch $proctype {
-				"ps7_cortexa9" {
-					set ttc_handle [get_handle_to_ps7_core $proc_handle "ps7_ttc"]
-					if {[string match "" $ttc_handle] } {
-						puts $config_file "/* Timer not defined */"
-					} else {
-						set timer [xget_hw_name $ttc_handle]
-						puts $config_file "/* Timer pheriphery is $timer */"
-						puts $config_file "#define XILINX_PS7_TTC_BASEADDR\t\t[uboot_addr_hex $ttc_handle "C_S_AXI_BASEADDR"]"
+		if { "$proctype" != "ps7_cortexa9" } {
+			set timer [xget_sw_parameter_value $os_handle "timer"]
+			if {[string match "" $timer] || [string match -nocase "none" $timer]} {
+				# FIXME: hack to find the ttc and scutimer
+				puts $config_file "/* Timer not defined */"
+			} else {
+				set timer_handle [xget_sw_ipinst_handle_from_processor $proc_handle $timer]
+				#test for correct system bus
+				test_buses $system_bus $timer_handle "SOPB"
+#				set timer_base [xget_sw_parameter_value $timer_handle "C_BASEADDR"]
+#				set timer_end [xget_sw_parameter_value $timer_handle "C_HIGHADDR"]
+#				set timer_base [format "0x%08x" $timer_base]
+				puts $config_file "/* Timer pheriphery is $timer */"
+				puts $config_file "#define XILINX_TIMER_BASEADDR\t[uboot_addr_hex $timer_handle "C_BASEADDR"]"
+
+#				puts "$timer_handle [xget_hw_value $timer_handle]"
+				set intr [get_intr $timer_handle $intc_handle $intc_value "Interrupt"]
+				puts $config_file "#define XILINX_TIMER_IRQ\t$intr"
+
+				if { [xget_hw_value $timer_handle] == "axi_timer"} {
+					set clkhandle [xget_hw_port_handle $timer_handle "S_AXI_ACLK"]
+					if {[string compare -nocase $clkhandle ""] != 0} {
+						set freq [xget_hw_subproperty_value $clkhandle "CLK_FREQ_HZ"]
 					}
-
-					puts $config_file ""
-					set scutimer_handle [get_handle_to_ps7_core $proc_handle "ps7_scutimer"]
-					set timer [xget_hw_name $scutimer_handle]
-					puts $config_file "/* SCU Timer pheriphery is $timer */"
-					puts $config_file "#define XPAR_SCUTIMER_BASEADDR\t\t[uboot_addr_hex $scutimer_handle "C_S_AXI_BASEADDR"]"
-				}
-				default {
-					puts $config_file "/* Timer not defined */"
 				}
 			}
-		} else {
-			set timer_handle [xget_sw_ipinst_handle_from_processor $proc_handle $timer]
-			#test for correct system bus
-			test_buses $system_bus $timer_handle "SOPB"
-#			set timer_base [xget_sw_parameter_value $timer_handle "C_BASEADDR"]
-#			set timer_end [xget_sw_parameter_value $timer_handle "C_HIGHADDR"]
-#			set timer_base [format "0x%08x" $timer_base]
-			puts $config_file "/* Timer pheriphery is $timer */"
-			puts $config_file "#define XILINX_TIMER_BASEADDR\t[uboot_addr_hex $timer_handle "C_BASEADDR"]"
-
-#			puts "$timer_handle [xget_hw_value $timer_handle]"
-			set intr [get_intr $timer_handle $intc_handle $intc_value "Interrupt"]
-			puts $config_file "#define XILINX_TIMER_IRQ\t$intr"
-
-			if { [xget_hw_value $timer_handle] == "axi_timer"} {
-				set clkhandle [xget_hw_port_handle $timer_handle "S_AXI_ACLK"]
-				if {[string compare -nocase $clkhandle ""] != 0} {
-					set freq [xget_hw_subproperty_value $clkhandle "CLK_FREQ_HZ"]
-				}
-			}
+			puts $config_file ""
 		}
-		puts $config_file ""
 	}
 
 	puts $config_file "/* System Timer Clock Frequency */"
