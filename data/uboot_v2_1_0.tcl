@@ -554,6 +554,12 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 	# Try manual memory setup
 	set main_memory_start [xget_sw_parameter_value $os_handle "main_memory_start"]
 	set main_memory_size [xget_sw_parameter_value $os_handle "main_memory_size"]
+	if {[llength $main_memory_start] == 0} {
+		set main_memory_start -1
+	}
+	if {[llength $main_memory_size] == 0} {
+		set main_memory_size 0
+	}
 	set eram_base [expr ${main_memory_start}]
 	set eram_size [expr ${main_memory_size}]
 	if { $eram_base >= 0 && $eram_size > 0 } {
@@ -564,6 +570,9 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 		puts $config_file "/* Main Memory doesn't exist */"
 	} else {
 		set main_mem_bank [xget_sw_parameter_value $os_handle "main_memory_bank"]
+		if {[llength $main_mem_bank] == 0} {
+			set main_mem_bank 0
+		}
 		set main_mem_handle [xget_sw_ipinst_handle_from_processor $proc_handle $main_mem]
 		if {[string compare -nocase $main_mem_handle ""] != 0} {
 			switch [xget_hw_value $main_mem_handle] {
@@ -635,6 +644,9 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 	} else {
 		set flash_mem_handle [xget_sw_ipinst_handle_from_processor $proc_handle $flash_mem]
 		set flash_mem_bank [xget_sw_parameter_value $os_handle "flash_memory_bank"]
+		if {[llength $flash_mem_bank] == 0} {
+			set flash_mem_bank 0
+		}
 		set flash_type [xget_hw_value $flash_mem_handle];
 		puts $config_file "/* Flash Memory is $flash_mem */"
 
