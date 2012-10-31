@@ -70,7 +70,11 @@ proc generate_uboot {os_handle} {
 	set config_file [open "xparameters.h" w]
 	headerc $config_file
 
-	puts $config_file "#define XILINX_BOARD_NAME\t\"$board_name\"\n"
+	if { [info exists board_name] } {
+		puts $config_file "#define XILINX_BOARD_NAME\t\"$board_name\"\n"
+	} else {
+		puts $config_file "#define XILINX_BOARD_NAME\t\U-BOOT_BSP\n"
+	}
 
 	# ******************************************************************************
 	# print system clock
