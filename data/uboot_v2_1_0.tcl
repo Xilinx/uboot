@@ -616,9 +616,10 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 
 			set eram_base [xget_sw_parameter_value $main_mem_handle $base_param_name]
 			set eram_end [xget_sw_parameter_value $main_mem_handle $high_param_name]
-			# FIXME: this is workaround for Xilinx 14.1/14.2, This can be removed on 14.3
+			# FIXME: this is workaround for Xilinx 14.1/14.2/14.3 to
+			# generate correct base memory address for ps7_ddr
 			set XIL_VER [xget_swverandbld]
-			if { [regexp -all -- 14.\[1|2\] $XIL_VER] && [xget_hw_value $main_mem_handle] == "ps7_ddr"} {
+			if { [regexp -all -- 14.\[1|2|3\] $XIL_VER] && [xget_hw_value $main_mem_handle] == "ps7_ddr"} {
 				set eram_base 0
 				set eram_high [expr $eram_end]
 			}
