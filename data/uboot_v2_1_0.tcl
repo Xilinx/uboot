@@ -720,6 +720,21 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 				# Set the NAND FLASH's controller's base address.
 				set nand_start [xget_sw_parameter_value $flash_mem_handle "C_S_AXI_BASEADDR"]
 				puts $config_file "#define XILINX_PS7_NAND_FLASH_BASEADDR\t$nand_start"
+
+				# set up required handler to figure out the SMC base addr
+				set proc_handle [xget_libgen_proc_handle]
+				set hwproc_handle [xget_handle $proc_handle "IPINST"]
+				set mhs_handle [xget_hw_parent_handle $hwproc_handle]
+				set ips [xget_hw_ipinst_handle $mhs_handle "*"]
+				foreach ip $ips {
+					set ipname [xget_hw_name $ip]
+					if { [string match "ps7_smcc_?" $ipname] != 0 } {
+						# Get base address of smcc
+						set smc_start [xget_sw_parameter_value $ip "C_S_AXI_BASEADDR"]
+						puts $config_file "#define XILINX_PS7_SMC_BASEADDR\t$smc_start"
+						break
+					}
+				}
 			}
 			"ps7_sram" {
 				# ZYNQ NOR FLASH
