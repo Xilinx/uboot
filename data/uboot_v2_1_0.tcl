@@ -739,8 +739,12 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 			"ps7_sram" {
 				# ZYNQ NOR FLASH
 				# Set the NOR FLASH's controller's base address.
-				set nand_start [xget_sw_parameter_value $flash_mem_handle "C_S_AXI_BASEADDR"]
-				puts $config_file "#define XILINX_PS7_NOR_FLASH_BASEADDR\t$nand_start"
+				set nor_start [xget_sw_parameter_value $flash_mem_handle "C_S_AXI_BASEADDR"]
+				set nor_end [xget_sw_parameter_value $flash_mem_handle "C_S_AXI_HIGHADDR"]
+				set nor_size [expr $nor_end - $nor_start + 1]
+				set nor_size [format "0x%08x" $nor_size]
+				puts $config_file "#define XILINX_PS7_NOR_FLASH_BASEADDR\t$nor_start"
+				puts $config_file "#define XILINX_PS7_NOR_FLASH_SIZE\t$nor_size"
 			}
 			default {
 				error "Unknown flash memory interface type $flash_type"
