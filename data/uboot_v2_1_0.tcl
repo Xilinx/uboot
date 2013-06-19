@@ -956,7 +956,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 			error "Main memory is not defined"
 		}
 	} else {
-		if {$eram_base < $text_base && $eram_high > $text_base} {
+		if {$eram_base <= $text_base && $eram_high > $text_base} {
 			#			puts $config_file2 "# TEXT BASE "
 			puts $config_file2 "TEXT_BASE = $text_base"
 			puts $config_file2 "CONFIG_SYS_TEXT_BASE = $text_base"
