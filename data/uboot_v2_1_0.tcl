@@ -918,6 +918,7 @@ proc uboot_intc {os_handle proc_handle config_file config_file2 freq system_bus}
 					}
 				}
 			}
+			"axi_ethernet_buffer" -
 			"axi_ethernet" {
 				set mhs_handle [xget_hw_parent_handle $ethernet_handle]
 				puts $config_file "#define XILINX_AXIEMAC_BASEADDR\t\t\t[uboot_addr_hex $ethernet_handle "C_BASEADDR"]"
