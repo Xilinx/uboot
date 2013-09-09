@@ -38,7 +38,7 @@ OPTION COMPILE_BSP = FALSE;
 PARAMETER name = stdout, desc = "stdout peripheral for bootloader", type = peripheral_instance, requires_interface=stdout, range=(mdm, opb_uartlite, xps_uartlite, xps_uart16550, opb_uart16550, opb_mdm, plb_uart16550, axi_uart16550, axi_uartlite, ps7_uart), default = none;
 PARAMETER name = stdin, desc = "stdin peripheral for bootloader", type = peripheral_instance, requires_interface=stdin, range=(mdm, opb_uartlite, xps_uartlite, xps_uart16550, opb_uart16550, opb_mdm, plb_uart16550, axi_uart16550, axi_uartlite, ps7_uart), default = none;
 
-PARAMETER name = main_memory, desc ="Name of Main Memory used with PetaLinux", type = peripheral_instance, range=(opb_ddr, opb_emc, plb_ddr, plb_emc, opb_sdram, plb_sdram, mch_opb_sdram, mch_opb_ddr, mch_opb_ddr2, mch_opb_emc, plb_ddr2, mpmc, ppc440mc_ddr2, xps_mch_emc, axi_s6_ddrx, axi_v6_ddrx, axi_7series_ddrx, ps7_ddr, axi_emc), default = none;
+PARAMETER name = main_memory, desc ="Name of Main Memory used with PetaLinux", type = peripheral_instance, range=(opb_ddr, opb_emc, plb_ddr, plb_emc, opb_sdram, plb_sdram, mch_opb_sdram, mch_opb_ddr, mch_opb_ddr2, mch_opb_emc, plb_ddr2, mpmc, ppc440mc_ddr2, xps_mch_emc, axi_s6_ddrx, axi_v6_ddrx, axi_7series_ddrx, ps7_ddr, mig_7series, axi_emc), default = none;
 PARAMETER name = flash_memory, desc ="Name of Flash Memory Controller used with PetaLinux", type = peripheral_instance, range=(opb_emc, plb_emc, mch_opb_emc, xps_mch_emc, xps_spi, axi_spi, axi_quad_spi, axi_emc, ps7_emc, ps7_qspi, ps7_nand, ps7_spi), default = none;
 
 PARAMETER name = uboot_position, desc="Uboot position in memory", type = integer, default = 0;
